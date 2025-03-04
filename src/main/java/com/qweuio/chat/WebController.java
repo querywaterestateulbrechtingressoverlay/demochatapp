@@ -12,13 +12,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class WebController {
   Logger logger = LoggerFactory.getLogger(WebController.class);
-  @Autowired
-  SimpMessagingTemplate template;
-  @PostMapping("/sendmsg")
-  void sendMessage(@RequestBody SuperMessage message) {
-    logger.info(message.toString());
-    template.convertAndSendToUser(message.recipient(), "/out/chat", message.message());
-  }
   @GetMapping("/ping")
   String pong() {
     return "pong";

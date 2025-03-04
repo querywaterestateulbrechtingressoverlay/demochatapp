@@ -1,6 +1,5 @@
 package com.qweuio.chat;
 
-import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -23,9 +22,7 @@ public class SecurityConfig {
       .csrf(AbstractHttpConfigurer::disable)
       .authorizeHttpRequests(auth -> {
         auth
-          .requestMatchers(HttpMethod.POST, "/sendmsg").authenticated()
-          .requestMatchers(HttpMethod.GET, "/**").authenticated();
-
+          .anyRequest().authenticated();
       })
       .httpBasic(Customizer.withDefaults())
       .build();
