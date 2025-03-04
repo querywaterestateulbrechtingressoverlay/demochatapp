@@ -20,18 +20,21 @@ public class SecurityConfig {
   SecurityFilterChain chatAppSecurity(HttpSecurity http) throws Exception {
     return http
       .csrf(AbstractHttpConfigurer::disable)
-      .authorizeHttpRequests(auth -> {
-        auth
-          .anyRequest().authenticated();
-      })
-      .httpBasic(Customizer.withDefaults())
+//      .authorizeHttpRequests(auth -> {
+//        auth
+//          .anyRequest().authenticated();
+//      })
+//      .httpBasic(Customizer.withDefaults())
       .build();
   }
   @Bean
   UserDetailsService userDetailsService() {
     UserDetailsManager uds = new InMemoryUserDetailsManager();
-    uds.createUser(User.builder().username("user-1").password("{noop}password1").authorities("chat-user").build());
-    uds.createUser(User.builder().username("user-2").password("{noop}password2").authorities("chat-user").build());
+    uds.createUser(User.builder().username("1").password("{noop}password").authorities("chat-user").build());
+    uds.createUser(User.builder().username("2").password("{noop}password").authorities("chat-user").build());
+    uds.createUser(User.builder().username("3").password("{noop}password").authorities("chat-user").build());
+    uds.createUser(User.builder().username("4").password("{noop}password").authorities("chat-user").build());
+    uds.createUser(User.builder().username("5").password("{noop}password").authorities("chat-user").build());
     return uds;
   }
 }

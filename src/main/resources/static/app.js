@@ -1,3 +1,6 @@
+var username;
+var chat;
+
 const stompClient = new StompJs.Client({
     brokerURL: 'ws://localhost:8080/websocket'
 });
@@ -8,7 +11,7 @@ stompClient.onConnect = (frame) => {
 //    stompClient.subscribe('/out/chat', (message) => {
 //        showMessage(JSON.parse(message.body).message);
 //    });
-    stompClient.subscribe('/user/user-2/out/chat', (message) => {
+    stompClient.subscribe('/user/' + username + '/message', (message) => {
       showMessage(JSON.parse(message.body).message);
     });
 };
@@ -46,7 +49,7 @@ function disconnect() {
 
 function sendMessage() {
     stompClient.publish({
-        destination: "/chatapp/in",
+        destination: "/chat/send/" + chat,
         body: JSON.stringify({'message': $("#message").val()})
     });
 }
@@ -55,7 +58,17 @@ function showMessage(message) {
     $("#message-list").append("<tr><td>" + message + "</td></tr>");
 }
 
+function login() {
+  username = $("#login").val();
+}
+
+function chat() {
+  chat = $("#chat").val();
+}
+
 $(function () {
+    $( "#submit-button-login").click(() => login());
+    $( "#submit-button-chat").click(() => chat());
     $("form").on('submit', (e) => e.preventDefault());
     $( "#connect" ).click(() => connect());
     $( "#disconnect" ).click(() => disconnect());

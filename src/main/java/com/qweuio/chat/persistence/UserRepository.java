@@ -2,6 +2,6 @@ package com.qweuio.chat.persistence;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
 
-public interface ChatroomRepository extends MongoRepository<Chatroom, Integer> {
+public interface UserRepository extends MongoRepository<User, Integer> {
 
 }
