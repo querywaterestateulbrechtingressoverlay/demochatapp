@@ -1,7 +1,7 @@
-package com.qweuio.chat;
+package com.qweuio.chat.exception;
 
 public class ChatroomAccessException extends RuntimeException {
-  ChatroomAccessException(String message) {
+  public ChatroomAccessException(String message) {
     super(message);
   }
 }

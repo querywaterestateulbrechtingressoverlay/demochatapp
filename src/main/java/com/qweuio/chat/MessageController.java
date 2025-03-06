@@ -1,11 +1,13 @@
 package com.qweuio.chat;
 
+import com.qweuio.chat.dto.ProcessedMessageDTO;
+import com.qweuio.chat.dto.UnprocessedMessageDTO;
+import com.qweuio.chat.exception.ChatroomAccessException;
 import com.qweuio.chat.persistence.Chatroom;
 import com.qweuio.chat.persistence.ChatroomRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -20,18 +22,19 @@ public class MessageController {
   ChatroomRepository chatroomRepo;
   @Autowired
   SimpMessagingTemplate template;
-  @MessageMapping("/send/{chatId}")
-  public void message(@DestinationVariable Integer chatId, @Payload Message message, Principal principal) {
+  @MessageMapping("/send")
+  public void message(@Payload UnprocessedMessageDTO message, Principal principal) {
     try {
-      Chatroom destChatroom = chatroomRepo.findById(chatId).orElseThrow(() -> new ChatroomAccessException("chatroom with id " + chatId + " does not exist"));
-//      if (!destChatroom.userIds().contains(Integer.valueOf(principal.getName()))) {
-//        throw new ChatroomAccessException("user " + principal + " tried to access chatroom " + chatId + " that they are not a member of");
-//      }
+      int senderId = Integer.parseInt(principal.getName());
+      Chatroom destChatroom = chatroomRepo.findById(message.chatroomId()).orElseThrow(() -> new ChatroomAccessException("chatroom with id " + message.chatroomId() + " does not exist"));
+      if (!destChatroom.userIds().contains(Integer.valueOf(principal.getName()))) {
+        throw new ChatroomAccessException("user " + senderId + " tried to access chatroom " + message.chatroomId() + " that they are not a member of");
+      }
       logger.info(destChatroom.toString());
       for (Integer userId : destChatroom.userIds()) {
-//        if (userId != Integer.valueOf(principal.getName())) {
-          template.convertAndSendToUser(userId.toString(), "/message", message);
-//        }
+        if (userId != senderId) {
+          template.convertAndSendToUser(userId.toString(), "/messages", new ProcessedMessageDTO(senderId, message.chatroomId(), message.message()));
+        }
       }
     } catch (ChatroomAccessException e) {
       template.convertAndSendToUser(principal.getName(), "/system", "Provided chatroom id either doesn't exist or you don't have the rights to post there");

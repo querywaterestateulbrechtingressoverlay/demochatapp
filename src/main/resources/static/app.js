@@ -1,5 +1,6 @@
-var username;
-var chat;
+var currentChatroom;
+const chatrooms = new Map();
+const cachedMessages = new Map();
 
 const stompClient = new StompJs.Client({
     brokerURL: 'ws://localhost:8080/websocket'
@@ -8,11 +9,8 @@ const stompClient = new StompJs.Client({
 stompClient.onConnect = (frame) => {
     setConnected(true);
     console.log('Connected: ' + frame);
-//    stompClient.subscribe('/out/chat', (message) => {
-//        showMessage(JSON.parse(message.body).message);
-//    });
-    stompClient.subscribe('/user/' + username + '/message', (message) => {
-      showMessage(JSON.parse(message.body).message);
+    stompClient.subscribe('/user/' + username + '/messages', (messageDTO) => {
+      showMessage(JSON.parse(messageDTO.body));
     });
 };
 
@@ -54,12 +52,54 @@ function sendMessage() {
     });
 }
 
-function showMessage(message) {
-    $("#message-list").append("<tr><td>" + message + "</td></tr>");
+async function showChatrooms() {
+  const availableChatrooms = await (await fetch("http://localhost:8080/mychatrooms", {
+    headers: {
+      Authorization: "Bearer " + token
+    }
+  }
+  )).json();
+  for (const chatroom of availableChatrooms) {
+    chatrooms.set(chatroom.id, chatroom.name);
+    $("#chatroom-list").append("<tr><td>" + chatroom.name + "</td></tr>");
+  }
 }
 
-function login() {
+function showMessage(message) {
+  if (cachedMessages.has(message.chatroomId)) {
+    cachedMessages.get(message.chatroomId).push({message: message.message, sender: message.senderId});
+  } else {
+    cachedMessages.set(message.chatroomId, [{message: message.message, sender: message.senderId}]);
+
+  }
+  if (message.chatroomId == currentChatroom) {
+    $("#message-list").append("<tr><td>" + message + "</td></tr>");
+  }  
+}
+
+function switchChatrooms(newChatroomId) {
+  $("$message-list").empty();
+  for (const message of cachedMessages.get(newChatroomId)) {
+    $("#message-list").append("<tr><td>" + message + "</td></tr>");
+  }
+}
+
+async function login() {
+  const headers = new Headers({
+    Authorization: 'Basic ' + btoa($("#login-username") + ':' + $("#login-password"))
+  }
+  try {
+    const token = (await (await fetch("localhost:8080/token", {
+      method: 'POST',
+      headers: headers
+    })).json()).token;
+
+  } catch (error) {
+    console.error(error);
+  }
+  const token =
   username = $("#login").val();
+  connect();
 }
 
 function chat() {
