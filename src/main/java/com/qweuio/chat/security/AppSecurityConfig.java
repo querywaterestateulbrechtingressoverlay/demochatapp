@@ -7,6 +7,7 @@ import com.nimbusds.jose.jwk.source.ImmutableJWKSet;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.proc.SecurityContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -16,18 +17,21 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.web.BearerTokenAuthenticationEntryPoint;
 import org.springframework.security.oauth2.server.resource.web.access.BearerTokenAccessDeniedHandler;
+import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 
 import static org.springframework.security.oauth2.core.authorization.OAuth2AuthorizationManagers.hasScope;
 
 @Configuration
 @EnableWebSecurity
+@EnableConfigurationProperties(SecurityProperties.class)
 public class AppSecurityConfig {
   @Autowired
   SecurityProperties securityProperties;
@@ -36,23 +40,28 @@ public class AppSecurityConfig {
   @Order(1)
   SecurityFilterChain securityConfigAuth(HttpSecurity http) throws Exception {
     return http
-        .securityMatcher("/token")
-        .cors(Customizer.withDefaults())
-        .authorizeHttpRequests(
-            (auth) -> auth
-                .requestMatchers(HttpMethod.POST, "/token").authenticated())
-        .httpBasic(Customizer.withDefaults())
-        .build();
+      .securityMatchers((r) -> r.requestMatchers("/token/**"))
+      .cors(Customizer.withDefaults())
+      .csrf(AbstractHttpConfigurer::disable)
+      .authorizeHttpRequests(
+        (auth) -> auth
+          .requestMatchers(HttpMethod.POST, "/token").authenticated())
+      .httpBasic(Customizer.withDefaults())
+      .build();
   }
 
   @Bean
   @Order(2)
   SecurityFilterChain securityConfigMain(HttpSecurity http) throws Exception {
     return http
+//      .cors(Customizer.withDefaults())
       .cors(Customizer.withDefaults())
+//      .csrf(AbstractHttpConfigurer::disable)
       .authorizeHttpRequests((auth) -> auth
-        .requestMatchers(HttpMethod.GET, "/**", "/js/**", "/css/**").permitAll()
-        .anyRequest().access(hasScope("chat")))
+        .requestMatchers(HttpMethod.GET, "/ping").access(hasScope("chat"))
+        .requestMatchers(HttpMethod.GET, "/csrf").access(hasScope("chat"))
+//        .requestMatchers(HttpMethod.GET, "/**", "/js/**", "/css/**").access(hasScope("chat"))
+      )
       .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()))
       .exceptionHandling((exceptions) -> exceptions
         .authenticationEntryPoint(new BearerTokenAuthenticationEntryPoint())
@@ -72,4 +81,9 @@ public class AppSecurityConfig {
     JWKSource<SecurityContext> jwkSource = new ImmutableJWKSet<>(new JWKSet(jwk));
     return new NimbusJwtEncoder(jwkSource);
   }
+  @Bean
+  UserDetailsManager uds() {
+    return new CustomUserDetailsService();
+  }
+
 }

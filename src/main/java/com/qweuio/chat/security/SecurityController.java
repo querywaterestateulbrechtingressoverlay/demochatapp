@@ -9,16 +9,16 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
 import java.util.stream.Collectors;
 
+@CrossOrigin
 @RestController
-public class TokenController {
-  private final Logger logger = LoggerFactory.getLogger(TokenController.class);
+public class SecurityController {
+  private final Logger logger = LoggerFactory.getLogger(SecurityController.class);
   private final long expirySeconds = 360000L;
 
   @Autowired
@@ -41,5 +41,10 @@ public class TokenController {
       .claim("scope", scope)
       .build();
     return new JWTokenDTO(encoder.encode(JwtEncoderParameters.from(claims)).getTokenValue(), expirySeconds);
+  }
+  @CrossOrigin
+  @GetMapping("/csrf")
+  public CsrfToken csrf(CsrfToken token) {
+    return token;
   }
 }

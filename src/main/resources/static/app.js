@@ -1,7 +1,7 @@
 var currentChatroom;
 const chatrooms = new Map();
 const cachedMessages = new Map();
-
+var jwttoken;
 const stompClient = new StompJs.Client({
     brokerURL: 'ws://localhost:8080/websocket'
 });
@@ -35,7 +35,11 @@ function setConnected(connected) {
     $("#greetings").html("");
 }
 
-function connect() {
+function connect(csrf) {
+    stompClient.connectionHeaders = {
+      "X-CSRF-TOKEN": csrf,
+      JWT: jwttoken
+    }
     stompClient.activate();
 }
 
@@ -85,21 +89,28 @@ function switchChatrooms(newChatroomId) {
 }
 
 async function login() {
-  const headers = new Headers({
-    Authorization: 'Basic ' + btoa($("#login-username") + ':' + $("#login-password"))
-  }
   try {
-    const token = (await (await fetch("localhost:8080/token", {
-      method: 'POST',
-      headers: headers
+    jwttoken = (await (await fetch("http://localhost:8080/token", {
+      method: "POST",
+      headers: {
+        Authorization: 'Basic ' + btoa($("#login-username").val() + ':' + $("#login-password").val())
+      }
     })).json()).token;
-
+    $("#login-form").empty();
+    $("#login-form").append("<p>Logged in as " + $("#login").val());
+    stompClient.connectHeaders = {
+      Authorization: "Bearer " + jwttoken
+    };
+    const csrf = (await (await fetch("http://localhost:8080/csrf", {
+                       headers: {
+                         Authorization: 'Bearer ' + jwttoken
+                       }
+                     })).json()).token;
+    connect(csrf);
+    console.log(csrf);
   } catch (error) {
     console.error(error);
   }
-  const token =
-  username = $("#login").val();
-  connect();
 }
 
 function chat() {
@@ -107,8 +118,8 @@ function chat() {
 }
 
 $(function () {
-    $( "#submit-button-login").click(() => login());
-    $( "#submit-button-chat").click(() => chat());
+    $( "#login-submit").click(async () => await login());
+    $( "#chat-submit").click(() => chat());
     $("form").on('submit', (e) => e.preventDefault());
     $( "#connect" ).click(() => connect());
     $( "#disconnect" ).click(() => disconnect());

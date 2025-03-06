@@ -18,8 +18,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-@Service
-@EnableConfigurationProperties(SecurityProperties.class)
 public class CustomUserDetailsService implements UserDetailsManager {
   private final Logger logger = LoggerFactory.getLogger(CustomUserDetailsService.class);
   @Autowired
@@ -37,7 +35,7 @@ public class CustomUserDetailsService implements UserDetailsManager {
     var userCredentials = userCredentialsRepository.findById(userInfo.id()).orElseThrow(RuntimeException::new);
     return User.builder()
       .username(userCredentials.id().toString())
-      .password(encoder.encode(userCredentials.password()))
+      .password(userCredentials.password())
       .authorities(userCredentials.authorities().stream().map(SimpleGrantedAuthority::new).toList())
       .build();
   }
