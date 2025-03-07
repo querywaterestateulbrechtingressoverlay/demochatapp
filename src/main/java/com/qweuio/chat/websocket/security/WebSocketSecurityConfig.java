@@ -1,4 +1,3 @@
-/*
 package com.qweuio.chat.websocket.security;
 
 import org.springframework.context.annotation.Bean;
@@ -14,9 +13,7 @@ public class WebSocketSecurityConfig {
   @Bean
   AuthorizationManager<Message<?>> messageAuthorizationManager(MessageMatcherDelegatingAuthorizationManager.Builder messages) {
     messages
-      .simpDestMatchers("/user/**").hasRole("USER");
-
+      .anyMessage().permitAll();
     return messages.build();
   }
 }
-*/

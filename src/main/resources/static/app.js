@@ -108,7 +108,7 @@ async function login() {
                      })).json()).token;
 
     stompClient.connectHeaders['Authorization'] = jwttoken;
-    stompClient.connectHeaders['x-csrf-token'] = csrf;
+    stompClient.connectHeaders['X-CSRF-TOKEN'] = csrf;
     connect();
     console.log(csrf);
   } catch (error) {

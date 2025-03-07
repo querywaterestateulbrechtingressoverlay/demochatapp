@@ -19,6 +19,10 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.web.csrf.CsrfToken;
+import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.csrf.DefaultCsrfToken;
+import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
@@ -28,7 +32,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSocketMessageBroker
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 99)
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
   @Autowired
   JwtDecoder jwtDecoder;
@@ -49,22 +53,21 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
       public Message<?> preSend(Message<?> message, MessageChannel channel) {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
         if (StompCommand.CONNECT.equals(accessor.getCommand())) {
-          String header = null;
+          String authHeader = null;
           List<String> ah = accessor.getNativeHeader("Authorization");
           if (ah != null) {
-            header = ah.getFirst();
+            authHeader = ah.getFirst();
           }
-          if (header != null) {
-            Jwt token = jwtDecoder.decode(header);
-            OAuth2TokenValidatorResult validatorResult = JwtValidators.createDefault().validate(token);
-            if (validatorResult.hasErrors()) {
-              throw new JwtValidationException("errors were found during the validation of Authorization header", validatorResult.getErrors());
-            } else {
-              JwtAuthenticationConverter c = new JwtAuthenticationConverter();
-              Authentication auth = c.convert(token);
-              accessor.setUser(auth);
-            }
+          Jwt token = jwtDecoder.decode(authHeader);
+          OAuth2TokenValidatorResult validatorResult = JwtValidators.createDefault().validate(token);
+          if (validatorResult.hasErrors()) {
+            throw new JwtValidationException("errors were found during the validation of Authorization header", validatorResult.getErrors());
+          } else {
+            JwtAuthenticationConverter c = new JwtAuthenticationConverter();
+            Authentication auth = c.convert(token);
+            accessor.setUser(auth);
           }
+//          accessor.getSessionAttributes().put("org.springframework.security.web.csrf.CsrfToken", csrfTokenRepository.generateToken(null));
         }
         return message;
       }
