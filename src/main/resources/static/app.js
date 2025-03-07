@@ -5,11 +5,12 @@ var jwttoken;
 const stompClient = new StompJs.Client({
     brokerURL: 'ws://localhost:8080/websocket'
 });
+var userId;
 
 stompClient.onConnect = (frame) => {
     setConnected(true);
     console.log('Connected: ' + frame);
-    stompClient.subscribe('/user/' + username + '/messages', (messageDTO) => {
+    stompClient.subscribe('/user/' + userId + '/messages', (messageDTO) => {
       showMessage(JSON.parse(messageDTO.body));
     });
 };
@@ -35,12 +36,9 @@ function setConnected(connected) {
     $("#greetings").html("");
 }
 
-function connect(csrf) {
-    stompClient.connectionHeaders = {
-      "X-CSRF-TOKEN": csrf,
-      JWT: jwttoken
-    }
+function connect() {
     stompClient.activate();
+    showChatrooms();
 }
 
 function disconnect() {
@@ -51,21 +49,21 @@ function disconnect() {
 
 function sendMessage() {
     stompClient.publish({
-        destination: "/chat/send/" + chat,
-        body: JSON.stringify({'message': $("#message").val()})
+        destination: "/chat/send",
+        body: JSON.stringify({'message': $("#message").val(), 'chatroomId': currentChatroom})
     });
 }
 
 async function showChatrooms() {
   const availableChatrooms = await (await fetch("http://localhost:8080/mychatrooms", {
     headers: {
-      Authorization: "Bearer " + token
+      Authorization: "Bearer " + jwttoken
     }
   }
   )).json();
   for (const chatroom of availableChatrooms) {
     chatrooms.set(chatroom.id, chatroom.name);
-    $("#chatroom-list").append("<tr><td>" + chatroom.name + "</td></tr>");
+    $("#chatroom-list").append("<tr><td data-roomId=\"" + chatroom.id + "\" id=\"chatroom-" + chatroom.id + "\" class=\"chatroom\">" + chatroom.name + "</td></tr>");
   }
 }
 
@@ -82,9 +80,11 @@ function showMessage(message) {
 }
 
 function switchChatrooms(newChatroomId) {
-  $("$message-list").empty();
-  for (const message of cachedMessages.get(newChatroomId)) {
-    $("#message-list").append("<tr><td>" + message + "</td></tr>");
+  $("#message-list").empty();
+  if (cachedMessages.has(newChatroomId)) {
+    for (const message of cachedMessages[newChatroomId]) {
+      $("#message-list").append("<tr><td>" + message + "</td></tr>");
+    }
   }
 }
 
@@ -106,7 +106,10 @@ async function login() {
                          Authorization: 'Bearer ' + jwttoken
                        }
                      })).json()).token;
-    connect(csrf);
+
+    stompClient.connectHeaders['Authorization'] = jwttoken;
+    stompClient.connectHeaders['x-csrf-token'] = csrf;
+    connect();
     console.log(csrf);
   } catch (error) {
     console.error(error);
@@ -118,6 +121,10 @@ function chat() {
 }
 
 $(function () {
+    $(document).on("click", ".chatroom", function() {
+      currentChatroom = $(this).data("roomid");
+      switchChatrooms($(this).data("roomid"));
+    });
     $( "#login-submit").click(async () => await login());
     $( "#chat-submit").click(() => chat());
     $("form").on('submit', (e) => e.preventDefault());

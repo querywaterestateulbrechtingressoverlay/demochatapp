@@ -32,9 +32,9 @@ public class MessageController {
       }
       logger.info(destChatroom.toString());
       for (Integer userId : destChatroom.userIds()) {
-        if (userId != senderId) {
+//        if (userId != senderId) {
           template.convertAndSendToUser(userId.toString(), "/messages", new ProcessedMessageDTO(senderId, message.chatroomId(), message.message()));
-        }
+//        }
       }
     } catch (ChatroomAccessException e) {
       template.convertAndSendToUser(principal.getName(), "/system", "Provided chatroom id either doesn't exist or you don't have the rights to post there");

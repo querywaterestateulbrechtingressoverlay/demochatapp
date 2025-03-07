@@ -40,12 +40,13 @@ public class AppSecurityConfig {
   @Order(1)
   SecurityFilterChain securityConfigAuth(HttpSecurity http) throws Exception {
     return http
-      .securityMatchers((r) -> r.requestMatchers("/token/**"))
+      .securityMatchers((r) -> r.requestMatchers("/token/**", "/websocket/**"))
       .cors(Customizer.withDefaults())
       .csrf(AbstractHttpConfigurer::disable)
       .authorizeHttpRequests(
         (auth) -> auth
-          .requestMatchers(HttpMethod.POST, "/token").authenticated())
+          .requestMatchers(HttpMethod.POST, "/token").authenticated()
+          .requestMatchers(HttpMethod.GET, "/websocket").permitAll())
       .httpBasic(Customizer.withDefaults())
       .build();
   }
@@ -60,7 +61,7 @@ public class AppSecurityConfig {
       .authorizeHttpRequests((auth) -> auth
         .requestMatchers(HttpMethod.GET, "/ping").access(hasScope("chat"))
         .requestMatchers(HttpMethod.GET, "/csrf").access(hasScope("chat"))
-//        .requestMatchers(HttpMethod.GET, "/**", "/js/**", "/css/**").access(hasScope("chat"))
+        .requestMatchers(HttpMethod.GET, "/**", "/js/**", "/css/**").access(hasScope("chat"))
       )
       .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()))
       .exceptionHandling((exceptions) -> exceptions
