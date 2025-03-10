@@ -42,9 +42,4 @@ public class SecurityController {
       .build();
     return new JWTokenDTO(encoder.encode(JwtEncoderParameters.from(claims)).getTokenValue(), expirySeconds);
   }
-  @CrossOrigin
-  @GetMapping("/csrf")
-  public CsrfToken csrf(CsrfToken token) {
-    return token;
-  }
 }

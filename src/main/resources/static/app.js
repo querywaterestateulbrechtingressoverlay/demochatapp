@@ -1,11 +1,16 @@
+const websocketUrl = "ws://localhost:8080/websocket";
+const backendUrl = "http://localhost:8080";
+const csrfEndpoint = "/csrf";
+const jwtEndpoint = "/token";
 var currentChatroom;
 const chatrooms = new Map();
 const cachedMessages = new Map();
 var jwttoken;
 const stompClient = new StompJs.Client({
-    brokerURL: 'ws://localhost:8080/websocket'
+    brokerURL: websocketUrl
 });
 var userId;
+const fetchHeaders = new Headers();
 
 stompClient.onConnect = (frame) => {
     setConnected(true);
@@ -88,29 +93,30 @@ function switchChatrooms(newChatroomId) {
   }
 }
 
+async function getCsrfToken() {
+  try {
+    const csrf = (await (await fetch(backendUrl + csrfEndpoint)).json());
+    fetchHeaders.set(csrf.headerName, csrf.token);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 async function login() {
   try {
-    jwttoken = (await (await fetch("http://localhost:8080/token", {
+    getCsrfToken();
+
+    fetchHeaders.set("Authorization", "Basic " + btoa($("#login-username").val() + ":" + $("#login-password").val()));
+    const jwt = (await (await fetch(backendUrl + jwtEndpoint, {
       method: "POST",
-      headers: {
-        Authorization: 'Basic ' + btoa($("#login-username").val() + ':' + $("#login-password").val())
-      }
+      headers: fetchHeaders
     })).json()).token;
+    fetchHeaders.set("Authorization", "Bearer " + jwt.token);
+
     $("#login-form").empty();
     $("#login-form").append("<p>Logged in as " + $("#login").val());
-    stompClient.connectHeaders = {
-      Authorization: "Bearer " + jwttoken
-    };
-    const csrf = (await (await fetch("http://localhost:8080/csrf", {
-                       headers: {
-                         Authorization: 'Bearer ' + jwttoken
-                       }
-                     })).json()).token;
 
-    stompClient.connectHeaders['Authorization'] = jwttoken;
-    stompClient.connectHeaders['x-csrf-token'] = csrf;
     connect();
-    console.log(csrf);
   } catch (error) {
     console.error(error);
   }

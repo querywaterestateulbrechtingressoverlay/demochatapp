@@ -38,11 +38,23 @@ public class AppSecurityConfig {
 
   @Bean
   @Order(1)
+  SecurityFilterChain securityConfigCsrfEndpoint(HttpSecurity http) throws Exception {
+    return http
+      .securityMatchers((r) -> r.requestMatchers("/csrf/**"))
+      .csrf(AbstractHttpConfigurer::disable)
+      .authorizeHttpRequests(
+        (auth) -> auth
+          .requestMatchers(HttpMethod.GET, "/csrf").permitAll())
+      .build();
+  }
+
+  @Bean
+  @Order(1)
   SecurityFilterChain securityConfigAuth(HttpSecurity http) throws Exception {
     return http
       .securityMatchers((r) -> r.requestMatchers("/token/**", "/websocket/**"))
-      .cors(Customizer.withDefaults())
       .csrf(AbstractHttpConfigurer::disable)
+      .cors(Customizer.withDefaults())
       .authorizeHttpRequests(
         (auth) -> auth
           .requestMatchers(HttpMethod.POST, "/token").authenticated()
@@ -55,12 +67,10 @@ public class AppSecurityConfig {
   @Order(2)
   SecurityFilterChain securityConfigMain(HttpSecurity http) throws Exception {
     return http
-//      .cors(Customizer.withDefaults())
       .cors(Customizer.withDefaults())
-//      .csrf(AbstractHttpConfigurer::disable)
+      .csrf(AbstractHttpConfigurer::disable)
       .authorizeHttpRequests((auth) -> auth
         .requestMatchers(HttpMethod.GET, "/ping").access(hasScope("chat"))
-        .requestMatchers(HttpMethod.GET, "/csrf").access(hasScope("chat"))
         .requestMatchers(HttpMethod.GET, "/**", "/js/**", "/css/**").access(hasScope("chat"))
       )
       .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()))

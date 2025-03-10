@@ -5,6 +5,7 @@ import com.qweuio.chat.dto.UnprocessedMessageDTO;
 import com.qweuio.chat.exception.ChatroomAccessException;
 import com.qweuio.chat.persistence.Chatroom;
 import com.qweuio.chat.persistence.ChatroomRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,6 +37,7 @@ public class MessageController {
           template.convertAndSendToUser(userId.toString(), "/messages", new ProcessedMessageDTO(senderId, message.chatroomId(), message.message()));
 //        }
       }
+
     } catch (ChatroomAccessException e) {
       template.convertAndSendToUser(principal.getName(), "/system", "Provided chatroom id either doesn't exist or you don't have the rights to post there");
     }
