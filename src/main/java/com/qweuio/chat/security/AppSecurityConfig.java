@@ -70,6 +70,7 @@ public class AppSecurityConfig {
       .cors(Customizer.withDefaults())
       .csrf(AbstractHttpConfigurer::disable)
       .authorizeHttpRequests((auth) -> auth
+        .requestMatchers(HttpMethod.GET, "/error").permitAll()
         .requestMatchers(HttpMethod.GET, "/ping").access(hasScope("chat"))
         .requestMatchers(HttpMethod.GET, "/**", "/js/**", "/css/**").access(hasScope("chat"))
       )

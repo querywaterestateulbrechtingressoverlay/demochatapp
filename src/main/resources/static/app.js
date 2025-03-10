@@ -116,6 +116,8 @@ async function login() {
     $("#login-form").empty();
     $("#login-form").append("<p>Logged in as " + $("#login").val());
 
+    stompClient.connectHeaders['Authorization'] = jwttoken;
+    stompClient.connectHeaders['X-CSRF-TOKEN'] = csrf;
     connect();
   } catch (error) {
     console.error(error);
