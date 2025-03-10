@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class MessageSenderService {
-  final String sendMsgTopic = "{chatapp.kafka.send-message-topic}";
+  final String sendMsgTopic = "{chatapp.kafka.message-topic}";
   @Autowired
   SimpMessagingTemplate template;
   @KafkaListener(topics = sendMsgTopic)

@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class KafkaService {
-  @Value("{chatapp.kafka.send-message-topic}")
+  @Value("{chatapp.kafka.message-topic}")
   String sendMsgTopic;
   KafkaTemplate<String, Object> kafkaTemplate;
   public void sendMessage(ProcessedMessageDTO message) {
