@@ -1,14 +1,12 @@
 package com.qweuio.chat.security;
 
-import com.qweuio.chat.persistence.UserRepository;
-import com.qweuio.chat.security.persistence.UserCredentials;
-import com.qweuio.chat.security.persistence.UserCredentialsRepository;
+import com.qweuio.chat.persistence.repository.ChatUserRepository;
+import com.qweuio.chat.security.data.UserCredentials;
+import com.qweuio.chat.security.data.UserCredentialsRepository;
 import org.slf4j.Logger;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.provisioning.UserDetailsManager;
-import org.springframework.stereotype.Service;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.User;
@@ -23,7 +21,7 @@ public class CustomUserDetailsService implements UserDetailsManager {
   @Autowired
   private UserCredentialsRepository userCredentialsRepository;
   @Autowired
-  private UserRepository userRepository;
+  private ChatUserRepository userRepository;
 
   private final PasswordEncoder encoder  = PasswordEncoderFactories.createDelegatingPasswordEncoder();
 

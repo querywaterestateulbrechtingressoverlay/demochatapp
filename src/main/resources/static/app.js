@@ -1,6 +1,5 @@
 const websocketUrl = "ws://localhost:8080/websocket";
 const backendUrl = "http://localhost:8080";
-const csrfEndpoint = "/csrf";
 const jwtEndpoint = "/token";
 var currentChatroom;
 const chatrooms = new Map();
@@ -61,9 +60,7 @@ function sendMessage() {
 
 async function showChatrooms() {
   const availableChatrooms = await (await fetch("http://localhost:8080/mychatrooms", {
-    headers: {
-      Authorization: "Bearer " + jwttoken
-    }
+    headers: fetchHeaders
   }
   )).json();
   for (const chatroom of availableChatrooms) {
@@ -74,50 +71,46 @@ async function showChatrooms() {
 
 function showMessage(message) {
   if (cachedMessages.has(message.chatroomId)) {
-    cachedMessages.get(message.chatroomId).push({message: message.message, sender: message.senderId});
+    cachedMessages.get(message.chatroomId).push(
+      {
+        message: message.message,
+        senderId: message.senderId
+      });
   } else {
-    cachedMessages.set(message.chatroomId, [{message: message.message, sender: message.senderId}]);
-
+    cachedMessages.set(message.chatroomId, [
+      {
+        message: message.message,
+        senderId: message.senderId
+      }]);
   }
   if (message.chatroomId == currentChatroom) {
-    $("#message-list").append("<tr><td>" + message + "</td></tr>");
+    $("#message-list").append("<tr><td>" + message.senderId + ":" + message.message + "</td></tr>");
   }  
 }
 
 function switchChatrooms(newChatroomId) {
   $("#message-list").empty();
   if (cachedMessages.has(newChatroomId)) {
-    for (const message of cachedMessages[newChatroomId]) {
-      $("#message-list").append("<tr><td>" + message + "</td></tr>");
+    for (const message of cachedMessages.get(newChatroomId)) {
+      $("#message-list").append("<tr><td>" + message.senderId + ":" + message.message + "</td></tr>");
     }
-  }
-}
-
-async function getCsrfToken() {
-  try {
-    const csrf = (await (await fetch(backendUrl + csrfEndpoint)).json());
-    fetchHeaders.set(csrf.headerName, csrf.token);
-  } catch (error) {
-    console.error(error);
   }
 }
 
 async function login() {
   try {
-    getCsrfToken();
-
     fetchHeaders.set("Authorization", "Basic " + btoa($("#login-username").val() + ":" + $("#login-password").val()));
-    const jwt = (await (await fetch(backendUrl + jwtEndpoint, {
+    const jwtResponse = (await (await fetch(backendUrl + jwtEndpoint, {
       method: "POST",
       headers: fetchHeaders
-    })).json()).token;
-    fetchHeaders.set("Authorization", "Bearer " + jwt.token);
+    })).json());
+    userId = jwtResponse.id;
+    fetchHeaders.set("Authorization", "Bearer " + jwtResponse.token);
+    stompClient.connectHeaders['Authorization'] = jwtResponse.token;
 
     $("#login-form").empty();
     $("#login-form").append("<p>Logged in as " + $("#login").val());
 
-    stompClient.connectHeaders['Authorization'] = jwttoken;
-    stompClient.connectHeaders['X-CSRF-TOKEN'] = csrf;
     connect();
   } catch (error) {
     console.error(error);

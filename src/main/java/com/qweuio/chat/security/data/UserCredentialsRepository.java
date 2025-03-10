@@ -1,4 +1,4 @@
-package com.qweuio.chat.security.persistence;
+package com.qweuio.chat.security.data;
 
 import org.springframework.data.mongodb.repository.MongoRepository;
 

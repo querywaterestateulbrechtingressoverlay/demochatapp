@@ -1,4 +1,4 @@
-package com.qweuio.chat;
+package com.qweuio.chat.websocket;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
