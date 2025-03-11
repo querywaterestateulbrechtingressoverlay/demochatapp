@@ -1,7 +1,7 @@
 package com.qweuio.chat;
 
-import com.qweuio.chat.persistence.entity.ChatRoom;
-import com.qweuio.chat.persistence.repository.ChatRoomRepository;
+import com.qweuio.chat.persistence.entity.Chatroom;
+import com.qweuio.chat.persistence.repository.ChatroomRepository;
 import com.qweuio.chat.persistence.entity.ChatUser;
 import com.qweuio.chat.persistence.repository.ChatUserRepository;
 import org.slf4j.Logger;
@@ -24,7 +24,7 @@ import java.util.List;
 public class WebController {
   Logger logger = LoggerFactory.getLogger(WebController.class);
   @Autowired
-  ChatRoomRepository chatroomRepo;
+  ChatroomRepository chatroomRepo;
   @Autowired
   ChatUserRepository userRepo;
   @Autowired
@@ -38,14 +38,15 @@ public class WebController {
   }
   @GetMapping("/mockinit")
   void init() {
-    ChatUser user1 = new ChatUser(1, "user-1", List.of(1));
-    ChatUser user2 = new ChatUser(2, "user-2", List.of(1, 2));
-    ChatUser user3 = new ChatUser(3, "user-3", List.of(1, 2, 3));
-    ChatUser user4 = new ChatUser(4, "user-4", List.of(2, 3));
-    ChatUser user5 = new ChatUser(5, "user-5", List.of(3));
-    ChatRoom chat1 = new ChatRoom(1, "chatroom-1", List.of(1, 2, 3), Collections.emptyList());
-    ChatRoom chat2 = new ChatRoom(2, "chatroom-2", List.of(2, 3, 4), Collections.emptyList());
-    ChatRoom chat3 = new ChatRoom(3, "chatroom-3", List.of(3, 4, 5), Collections.emptyList());
+    logger.info("init");
+    ChatUser user1 = new ChatUser(1, "user-1", List.of("1"));
+    ChatUser user2 = new ChatUser(2, "user-2", List.of("1", "2"));
+    ChatUser user3 = new ChatUser(3, "user-3", List.of("1", "2", "3"));
+    ChatUser user4 = new ChatUser(4, "user-4", List.of("2", "3"));
+    ChatUser user5 = new ChatUser(5, "user-5", List.of("3"));
+    Chatroom chat1 = new Chatroom("1", "chatroom-1", List.of(1, 2, 3), Collections.emptyList());
+    Chatroom chat2 = new Chatroom("2", "chatroom-2", List.of(2, 3, 4), Collections.emptyList());
+    Chatroom chat3 = new Chatroom("3", "chatroom-3", List.of(3, 4, 5), Collections.emptyList());
     userRepo.saveAll(List.of(user1, user2, user3, user4, user5));
     chatroomRepo.saveAll(List.of(chat1, chat2, chat3));
     for (int i = 1; i <= 5; i++) {
@@ -57,7 +58,7 @@ public class WebController {
     }
   }
   @GetMapping("/mychatrooms")
-  List<ChatRoom> getAvailableChatrooms(Principal principal) {
+  List<Chatroom> getAvailableChatrooms(Principal principal) {
     return userRepo.findById(Integer.valueOf(principal.getName()))
         .orElseThrow(() -> new RuntimeException("wtf"))
         .chatroomIds().stream().map((id) -> chatroomRepo.findById(id).get()).toList();

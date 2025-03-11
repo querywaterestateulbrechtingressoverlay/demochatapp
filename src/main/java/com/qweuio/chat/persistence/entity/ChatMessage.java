@@ -8,9 +8,9 @@ import java.time.Instant;
 @Document("messages")
 public record ChatMessage(
   @Id
-  Integer id,
-  Integer senderId,
-  Integer chatroomId,
+  String id,
+  String senderId,
+  String chatroomId,
   Instant sentAt,
   String contents
 ) {

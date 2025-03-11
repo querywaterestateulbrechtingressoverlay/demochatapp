@@ -6,9 +6,9 @@ import org.springframework.data.mongodb.core.mapping.Document;
 import java.util.List;
 
 @Document("chatroomIds")
-public record ChatRoom(
+public record Chatroom(
     @Id
-    Integer id,
+    String id,
     String name,
     List<Integer> userIds,
     List<Integer> messageIds

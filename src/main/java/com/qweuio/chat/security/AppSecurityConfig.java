@@ -71,8 +71,10 @@ public class AppSecurityConfig {
       .csrf(AbstractHttpConfigurer::disable)
       .authorizeHttpRequests((auth) -> auth
         .requestMatchers(HttpMethod.GET, "/error").permitAll()
+        .requestMatchers(HttpMethod.GET, "/mockinit").permitAll()
         .requestMatchers(HttpMethod.GET, "/ping").access(hasScope("chat"))
         .requestMatchers(HttpMethod.GET, "/**", "/js/**", "/css/**").access(hasScope("chat"))
+        .anyRequest().access(hasScope("chat"))
       )
       .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()))
       .exceptionHandling((exceptions) -> exceptions
