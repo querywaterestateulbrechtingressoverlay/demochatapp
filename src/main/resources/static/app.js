@@ -3,6 +3,7 @@ const backendUrl = "http://localhost:8080";
 const jwtEndpoint = "/token";
 var currentChatroom;
 const chatrooms = new Map();
+const cachedUsers = new Map();
 const cachedMessages = new Map();
 var jwttoken;
 const stompClient = new StompJs.Client({
@@ -17,6 +18,11 @@ stompClient.onConnect = (frame) => {
     stompClient.subscribe('/user/' + userId + '/messages', (messageDTO) => {
       showMessage(JSON.parse(messageDTO.body));
     });
+    stompClient.subscribe("/user/" + userId + "/userlist", (userList) => {
+      updateUserList(JSON.parse(userList.body));
+    });
+    showChatrooms();
+    switchChatrooms(chatrooms.keys().next().value());
 };
 
 stompClient.onWebSocketError = (error) => {
@@ -42,7 +48,6 @@ function setConnected(connected) {
 
 function connect() {
     stompClient.activate();
-    showChatrooms();
 }
 
 function disconnect() {
@@ -52,10 +57,33 @@ function disconnect() {
 }
 
 function sendMessage() {
-    stompClient.publish({
-        destination: "/chat/send",
-        body: JSON.stringify({'message': $("#message").val(), 'chatroomId': currentChatroom})
-    });
+  stompClient.publish({
+    destination: "/chat/" + currentChatroom + "/send",
+    body: JSON.stringify({'message': $("#message").val()})
+  });
+}
+
+function requestUserListUpdate() {
+  stompClient.publish({
+    destination: "/chat/" + currentChatroom + "/getUsers"
+  });
+}
+
+function showUserList(chatroomId) {
+  $("#user-list").empty();
+  const userl = $("#user-list");
+  const asd = cachedUsers.get(chatroomId);
+  for (const user of cachedUsers.get(chatroomId)) {
+    $("#user-list").append("<tr><td>" + user.name + "</td></tr>");
+  }
+  
+}
+
+function updateUserList(userList) {
+  cachedUsers.set(userList.chatId, userList.users);
+  if (currentChatroom == userList.chatId) {
+    showUserList(userList.chatId);
+  }
 }
 
 async function showChatrooms() {
@@ -92,8 +120,11 @@ function switchChatrooms(newChatroomId) {
   $("#message-list").empty();
   if (cachedMessages.has(newChatroomId)) {
     for (const message of cachedMessages.get(newChatroomId)) {
-      $("#message-list").append("<tr><td>" + message.senderId + ":" + message.message + "</td></tr>");
+      $("#message-list").append("<tr><td>" + message.senderId + ": " + message.message + "</td></tr>");
     }
+  }
+  if (!cachedUsers.has(newChatroomId)) {
+    requestUserListUpdate();
   }
 }
 
@@ -106,10 +137,10 @@ async function login() {
     })).json());
     userId = jwtResponse.id;
     fetchHeaders.set("Authorization", "Bearer " + jwtResponse.token);
-    stompClient.connectHeaders['Authorization'] = jwtResponse.token;
 
     $("#login-form").empty();
     $("#login-form").append("<p>Logged in as " + $("#login").val());
+    stompClient.connectHeaders['Authorization'] = jwtResponse.token;
 
     connect();
   } catch (error) {

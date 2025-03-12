@@ -43,7 +43,7 @@ public class ChatOperationController {
     return destChatroom.isPresent() && destChatroom.get().users().stream().anyMatch((ur) -> ur.userId() == userId);
   }
 
-  @MessageMapping("/createChat")
+  @MessageMapping("/create")
   void createChat(@Payload ChatroomNameDTO chatCreationRequest, Principal principal) {
     if (userRepo.findById(principal.getName()).get().chatroomIds().size() < 100) {
       String newChatroomId = chatroomRepo.save(
@@ -59,7 +59,7 @@ public class ChatOperationController {
       messagingTemplate.convertAndSendToUser(principal.getName(), "/system", "Can't create a chatroom due to user being a member of too many chatrooms");
     }
   }
-  @MessageMapping("/chat/{chatId}/delete")
+  @MessageMapping("/{chatId}/delete")
   void deleteChat(@DestinationVariable String chatId, Principal principal) {
     try {;
       List<UserRole> chatUsers = chatroomRepo.findById(chatId).orElseThrow(() -> new ChatroomAccessException("Chatroom " + chatId + " couldn't be found")).users();
@@ -75,7 +75,7 @@ public class ChatOperationController {
       messagingTemplate.convertAndSendToUser(principal.getName(), "/system", e.getMessage());
     }
   }
-  @MessageMapping("/chat/{chatId}/invite")
+  @MessageMapping("/{chatId}/invite")
   void inviteUserToChat(@Payload UserIdDTO userInvitationRequest,
                         @DestinationVariable String chatId,
                         Principal principal) {
@@ -106,7 +106,7 @@ public class ChatOperationController {
       messagingTemplate.convertAndSendToUser(principal.getName(), "/system", e.getMessage());
     }
   }
-  @MessageMapping("/chat/{chatId}/kick")
+  @MessageMapping("/{chatId}/kick")
   void kickUserFromChat(@Payload UserIdDTO userToKick,
                         @DestinationVariable String chatId,
                         Principal principal) {
