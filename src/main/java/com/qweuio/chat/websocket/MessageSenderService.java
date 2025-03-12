@@ -1,5 +1,6 @@
 package com.qweuio.chat.websocket;
 
+import com.qweuio.chat.persistence.entity.UserRole;
 import com.qweuio.chat.persistence.repository.ChatroomRepository;
 import com.qweuio.chat.websocket.dto.ProcessedMessageDTO;
 import org.slf4j.Logger;
@@ -20,9 +21,9 @@ public class MessageSenderService {
   @KafkaListener(id = "messageSender", topics = sendMsgTopic)
   public void send(ProcessedMessageDTO message) {
     logger.info(message.toString());
-    for (Integer userId : chatroomRepository.findById(message.chatroomId()).get().userIds()) {
-      logger.info("broadcasting message from chatroom {} to user {}", message.chatroomId(), userId);
-      template.convertAndSendToUser(userId.toString(), "/messages", message);
+    for (UserRole user : chatroomRepository.findById(message.chatroomId()).get().users()) {
+      logger.info("broadcasting message from chatroom {} to user {}", message.chatroomId(), user.userId());
+      template.convertAndSendToUser(user.userId(), "/messages", message);
     }
   }
 }

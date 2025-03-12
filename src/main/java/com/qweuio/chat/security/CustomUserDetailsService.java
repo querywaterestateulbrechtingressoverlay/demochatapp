@@ -30,7 +30,7 @@ public class CustomUserDetailsService implements UserDetailsManager {
     logger.info("loading user {}", username);
     var userInfo = userRepository.findByName(username)
         .orElseThrow(() -> new UsernameNotFoundException("user " + username + " was not found"));
-    var userCredentials = userCredentialsRepository.findById(userInfo.id()).orElseThrow(RuntimeException::new);
+    var userCredentials = userCredentialsRepository.findById(Integer.valueOf(userInfo.id())).orElseThrow(RuntimeException::new);
     return User.builder()
       .username(userCredentials.id().toString())
       .password(userCredentials.password())

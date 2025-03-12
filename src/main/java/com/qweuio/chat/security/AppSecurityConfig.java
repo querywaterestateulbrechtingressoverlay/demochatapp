@@ -49,7 +49,7 @@ public class AppSecurityConfig {
   }
 
   @Bean
-  @Order(1)
+  @Order(2)
   SecurityFilterChain securityConfigAuth(HttpSecurity http) throws Exception {
     return http
       .securityMatchers((r) -> r.requestMatchers("/token/**", "/websocket/**"))
@@ -64,7 +64,7 @@ public class AppSecurityConfig {
   }
 
   @Bean
-  @Order(2)
+  @Order(3)
   SecurityFilterChain securityConfigMain(HttpSecurity http) throws Exception {
     return http
       .cors(Customizer.withDefaults())

@@ -7,7 +7,7 @@ import java.util.List;
 @Document("users")
 public record ChatUser(
     @Id
-    Integer id,
+    String id,
     String name,
     List<String> chatroomIds
 ) {

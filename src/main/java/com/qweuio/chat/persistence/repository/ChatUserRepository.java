@@ -5,6 +5,6 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 
 import java.util.Optional;
 
-public interface ChatUserRepository extends MongoRepository<ChatUser, Integer> {
+public interface ChatUserRepository extends MongoRepository<ChatUser, String> {
   Optional<ChatUser> findByName(String name);
 }
