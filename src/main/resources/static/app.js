@@ -17,12 +17,15 @@ stompClient.onConnect = (frame) => {
     setConnected(true);
     console.log('Connected: ' + frame);
     stompClient.subscribe('/user/' + userId + '/messages', (messageDTO) => {
-        showMessage(JSON.parse(messageDTO.body));
+      showMessage(JSON.parse(messageDTO.body));
     });
     stompClient.subscribe("/user/" + userId + "/userlist", (userList) => {
-        updateUserList(JSON.parse(userList.body));
+      updateUserList(JSON.parse(userList.body));
     });
-    showChatrooms();
+    stompClient.subscribe("/user/" + userId + "/chatrooms", (chatroomList) => {
+      updateChatroomList(JSON.parse(chatroomList.body).chatrooms);
+    });
+    requestChatroomListUpdate();
     switchChatrooms(chatrooms.keys().next().value);
 };
 
@@ -64,35 +67,41 @@ function sendMessage() {
 }
 
 function requestUserListUpdate() {
-    stompClient.publish({
-        destination: "/chat/" + currentChatroom + "/getUsers"
-    });
+  stompClient.publish({
+    destination: "/chat/" + currentChatroom + "/getUsers"
+  });
+}
+
+function requestChatroomListUpdate() {
+  stompClient.publish({
+    destination: "/chat/getAvailableChatrooms"
+  });
 }
 
 function showUserList(chatroomId) {
-    $("#user-list").empty();
-    const userl = $("#user-list");
-    const asd = cachedUsers.get(chatroomId);
-    for (const user of cachedUsers.get(chatroomId)) {
-        $("#user-list").append("<tr><td>" + user.name + " <button class='kick-user' data-userid='" + user.id + "'>Kick</button></td></tr>");
-    }
+  $("#user-list").empty();
+  const userl = $("#user-list");
+  for (const user of cachedUsers.get(chatroomId)) {
+    $("#user-list").append("<tr><td>" + user.name + " <button class='kick-user' data-userid='" + user.id + "'>Kick</button></td></tr>");
+  }
 }
 
 function updateUserList(userList) {
     cachedUsers.set(userList.chatId, userList.users);
     if (currentChatroom == userList.chatId) {
-        showUserList(userList.chatId);
+      showUserList(userList.chatId);
     }
 }
 
-async function showChatrooms() {
-    const availableChatrooms = await (await fetch("http://localhost:8080/mychatrooms", {
-        headers: fetchHeaders
-    })).json();
-    for (const chatroom of availableChatrooms) {
-        chatrooms.set(chatroom.id, chatroom.name);
-        $("#chatroom-list").append("<tr><td data-roomId=\"" + chatroom.id + "\" id=\"chatroom-" + chatroom.id + "\" class=\"chatroom\">" + chatroom.name + "</td></tr>");
-    }
+function updateChatroomList(chatroomList) {
+  $("#chatroom-list").empty();
+  chatrooms.clear();
+  for (const chatroom of chatroomList) {
+    chatrooms.set(chatroom.id, chatroom.name);
+    $("#chatroom-list")
+      .append("<tr><td data-roomId=\"" + chatroom.id + "\" id=\"chatroom-"
+      + chatroom.id + "\" class=\"chatroom\">" + chatroom.name + "</td></tr>");
+  }
 }
 
 function showMessage(message) {
@@ -109,15 +118,15 @@ function showMessage(message) {
 }
 
 function switchChatrooms(newChatroomId) {
-    $("#message-list").empty();
-    if (cachedMessages.has(newChatroomId)) {
-        for (const message of cachedMessages.get(newChatroomId)) {
-            $("#message-list").append("<tr><td>" + message.senderId + ": " + message.message + "</td></tr>");
-        }
+  $("#message-list").empty();
+  if (cachedMessages.has(newChatroomId)) {
+    for (const message of cachedMessages.get(newChatroomId)) {
+      $("#message-list").append("<tr><td>" + message.senderId + ": " + message.message + "</td></tr>");
     }
-    if (!cachedUsers.has(newChatroomId)) {
-        requestUserListUpdate();
-    }
+  }
+  if (!cachedUsers.has(newChatroomId)) {
+    requestUserListUpdate();
+  }
 }
 
 async function login() {

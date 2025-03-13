@@ -59,10 +59,4 @@ public class WebController {
         .build());
     }
   }
-  @GetMapping("/mychatrooms")
-  List<Chatroom> getAvailableChatrooms(Principal principal) {
-    return userRepo.findById(principal.getName())
-        .orElseThrow(() -> new RuntimeException("wtf"))
-        .chatroomIds().stream().map((id) -> chatroomRepo.findById(id).get()).toList();
-  }
 }

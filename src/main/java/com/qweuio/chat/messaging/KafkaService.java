@@ -23,6 +23,4 @@ public class KafkaService {
   public void updateUserList(ChatUserListDTO userList) {
     kafkaMessageTemplate.send(userListTopic, userList);
   }
-
-//  public void
 }

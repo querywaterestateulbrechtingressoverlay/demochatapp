@@ -5,7 +5,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.util.List;
 
-@Document("chatroomIds")
+@Document("chatrooms")
 public record Chatroom(
     @Id
     String id,
