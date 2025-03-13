@@ -1,3 +1,4 @@
+ 
 const websocketUrl = "ws://localhost:8080/websocket";
 const backendUrl = "http://localhost:8080";
 const jwtEndpoint = "/token";
@@ -16,13 +17,13 @@ stompClient.onConnect = (frame) => {
     setConnected(true);
     console.log('Connected: ' + frame);
     stompClient.subscribe('/user/' + userId + '/messages', (messageDTO) => {
-      showMessage(JSON.parse(messageDTO.body));
+        showMessage(JSON.parse(messageDTO.body));
     });
     stompClient.subscribe("/user/" + userId + "/userlist", (userList) => {
-      updateUserList(JSON.parse(userList.body));
+        updateUserList(JSON.parse(userList.body));
     });
     showChatrooms();
-    switchChatrooms(chatrooms.keys().next().value());
+    switchChatrooms(chatrooms.keys().next().value);
 };
 
 stompClient.onWebSocketError = (error) => {
@@ -39,8 +40,7 @@ function setConnected(connected) {
     $("#disconnect").prop("disabled", !connected);
     if (connected) {
         $("#conversation").show();
-    }
-    else {
+    } else {
         $("#conversation").hide();
     }
     $("#greetings").html("");
@@ -57,110 +57,117 @@ function disconnect() {
 }
 
 function sendMessage() {
-  stompClient.publish({
-    destination: "/chat/" + currentChatroom + "/send",
-    body: JSON.stringify({'message': $("#message").val()})
-  });
+    stompClient.publish({
+        destination: "/chat/" + currentChatroom + "/send",
+        body: JSON.stringify({'message': $("#message").val()})
+    });
 }
 
 function requestUserListUpdate() {
-  stompClient.publish({
-    destination: "/chat/" + currentChatroom + "/getUsers"
-  });
+    stompClient.publish({
+        destination: "/chat/" + currentChatroom + "/getUsers"
+    });
 }
 
 function showUserList(chatroomId) {
-  $("#user-list").empty();
-  const userl = $("#user-list");
-  const asd = cachedUsers.get(chatroomId);
-  for (const user of cachedUsers.get(chatroomId)) {
-    $("#user-list").append("<tr><td>" + user.name + "</td></tr>");
-  }
-  
+    $("#user-list").empty();
+    const userl = $("#user-list");
+    const asd = cachedUsers.get(chatroomId);
+    for (const user of cachedUsers.get(chatroomId)) {
+        $("#user-list").append("<tr><td>" + user.name + " <button class='kick-user' data-userid='" + user.id + "'>Kick</button></td></tr>");
+    }
 }
 
 function updateUserList(userList) {
-  cachedUsers.set(userList.chatId, userList.users);
-  if (currentChatroom == userList.chatId) {
-    showUserList(userList.chatId);
-  }
+    cachedUsers.set(userList.chatId, userList.users);
+    if (currentChatroom == userList.chatId) {
+        showUserList(userList.chatId);
+    }
 }
 
 async function showChatrooms() {
-  const availableChatrooms = await (await fetch("http://localhost:8080/mychatrooms", {
-    headers: fetchHeaders
-  }
-  )).json();
-  for (const chatroom of availableChatrooms) {
-    chatrooms.set(chatroom.id, chatroom.name);
-    $("#chatroom-list").append("<tr><td data-roomId=\"" + chatroom.id + "\" id=\"chatroom-" + chatroom.id + "\" class=\"chatroom\">" + chatroom.name + "</td></tr>");
-  }
+    const availableChatrooms = await (await fetch("http://localhost:8080/mychatrooms", {
+        headers: fetchHeaders
+    })).json();
+    for (const chatroom of availableChatrooms) {
+        chatrooms.set(chatroom.id, chatroom.name);
+        $("#chatroom-list").append("<tr><td data-roomId=\"" + chatroom.id + "\" id=\"chatroom-" + chatroom.id + "\" class=\"chatroom\">" + chatroom.name + "</td></tr>");
+    }
 }
 
 function showMessage(message) {
-  if (cachedMessages.has(message.chatroomId)) {
-    cachedMessages.get(message.chatroomId).push(
-      {
+    if (!cachedMessages.has(message.chatroomId)) {
+        cachedMessages.set(message.chatroomId, []);
+    }
+    cachedMessages.get(message.chatroomId).push({
         message: message.message,
         senderId: message.senderId
-      });
-  } else {
-    cachedMessages.set(message.chatroomId, [
-      {
-        message: message.message,
-        senderId: message.senderId
-      }]);
-  }
-  if (message.chatroomId == currentChatroom) {
-    $("#message-list").append("<tr><td>" + message.senderId + ":" + message.message + "</td></tr>");
-  }  
+    });
+    if (message.chatroomId == currentChatroom) {
+        $("#message-list").append("<tr><td>" + message.senderId + ":" + message.message + "</td></tr>");
+    }
 }
 
 function switchChatrooms(newChatroomId) {
-  $("#message-list").empty();
-  if (cachedMessages.has(newChatroomId)) {
-    for (const message of cachedMessages.get(newChatroomId)) {
-      $("#message-list").append("<tr><td>" + message.senderId + ": " + message.message + "</td></tr>");
+    $("#message-list").empty();
+    if (cachedMessages.has(newChatroomId)) {
+        for (const message of cachedMessages.get(newChatroomId)) {
+            $("#message-list").append("<tr><td>" + message.senderId + ": " + message.message + "</td></tr>");
+        }
     }
-  }
-  if (!cachedUsers.has(newChatroomId)) {
-    requestUserListUpdate();
-  }
+    if (!cachedUsers.has(newChatroomId)) {
+        requestUserListUpdate();
+    }
 }
 
 async function login() {
-  try {
-    fetchHeaders.set("Authorization", "Basic " + btoa($("#login-username").val() + ":" + $("#login-password").val()));
-    const jwtResponse = (await (await fetch(backendUrl + jwtEndpoint, {
-      method: "POST",
-      headers: fetchHeaders
-    })).json());
-    userId = jwtResponse.id;
-    fetchHeaders.set("Authorization", "Bearer " + jwtResponse.token);
+    try {
+        fetchHeaders.set("Authorization", "Basic " + btoa($("#login-username").val() + ":" + $("#login-password").val()));
+        const jwtResponse = (await (await fetch(backendUrl + jwtEndpoint, {
+            method: "POST",
+            headers: fetchHeaders
+        })).json());
+        userId = jwtResponse.id;
+        fetchHeaders.set("Authorization", "Bearer " + jwtResponse.token);
 
-    $("#login-form").empty();
-    $("#login-form").append("<p>Logged in as " + $("#login").val());
-    stompClient.connectHeaders['Authorization'] = jwtResponse.token;
+        $("#login-form").empty();
+        $("#login-form").append("<p>Logged in as " + $("#login").val());
+        stompClient.connectHeaders['Authorization'] = jwtResponse.token;
 
-    connect();
-  } catch (error) {
-    console.error(error);
-  }
+        connect();
+    } catch (error) {
+        console.error(error);
+    }
 }
 
-function chat() {
-  chat = $("#chat").val();
+function inviteUser() {
+    const userIdToInvite = $("#invite-user-id").val();
+    stompClient.publish({
+        destination: "/chat/" + currentChatroom + "/invite",
+        body: JSON.stringify({'userId': userIdToInvite})
+    });
+}
+
+function kickUser(userId) {
+    stompClient.publish({
+        destination: "/chat/" + currentChatroom + "/kick",
+        body: JSON.stringify({'userId': userId})
+    });
 }
 
 $(function () {
     $(document).on("click", ".chatroom", function() {
-      currentChatroom = $(this).data("roomid");
-      switchChatrooms($(this).data("roomid"));
+        currentChatroom = $(this).data("roomid");
+        switchChatrooms($(this).data("roomid"));
     });
-    $( "#login-submit").click(async () => await login());
-    $( "#chat-submit").click(() => chat());
+    $("#login-submit").click(async () => await login());
+    $("#invite-submit").click(() => inviteUser());
+    $(document).on("click", ".kick-user", function() {
+        const userId = $(this).data("userid");
+        kickUser(userId);
+    });
     $("form").on('submit', (e) => e.preventDefault());
-    $( "#connect" ).click(() => connect());
-    $( "#disconnect" ).click(() => disconnect());
-    $( "#send" ).click(() => sendMessage());
+    $("#connect").click(() => connect());
+    $("#disconnect").click(() => disconnect());
+    $("#send").click(() => sendMessage());
 });

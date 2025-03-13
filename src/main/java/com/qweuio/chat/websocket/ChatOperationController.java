@@ -26,6 +26,7 @@ import org.springframework.stereotype.Controller;
 import java.security.Principal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Controller
@@ -39,8 +40,16 @@ public class ChatOperationController {
   @Autowired
   SimpMessagingTemplate messagingTemplate;
   boolean checkUserMembership(String userId, String chatroomId) {
+//    Optional<Chatroom> destChatroom = chatroomRepo.findById(chatroomId);
+//    if (destChatroom.isPresent()) {
+//      Optional<UserRole> user = destChatroom.get().users().stream().filter((ur) -> Objects.equals(ur.userId(), userId)).findFirst();
+//      if (user.isPresent()) {
+//        return true;
+//      }
+//    }
+//    return false;
     Optional<Chatroom> destChatroom = chatroomRepo.findById(chatroomId);
-    return destChatroom.isPresent() && destChatroom.get().users().stream().anyMatch((ur) -> ur.userId() == userId);
+    return destChatroom.isPresent() && destChatroom.get().users().stream().anyMatch((ur) -> Objects.equals(ur.userId(), userId));
   }
 
   @MessageMapping("/create")
@@ -64,7 +73,7 @@ public class ChatOperationController {
     try {;
       List<UserRole> chatUsers = chatroomRepo.findById(chatId).orElseThrow(() -> new ChatroomAccessException("Chatroom " + chatId + " couldn't be found")).users();
       chatUsers.stream()
-        .filter((ur) -> ur.userId() == principal.getName() && ur.role() == "ADMIN")
+        .filter((ur) -> Objects.equals(ur.userId(), principal.getName()) && Objects.equals(ur.role(), "ADMIN"))
         .findAny().orElseThrow(() -> new ChatroomAccessException("You don't have the permission to delete this chatroom"));
       chatroomRepo.deleteById(chatId);
       mongoTemplate.updateFirst(
@@ -83,8 +92,8 @@ public class ChatOperationController {
       if (!checkUserMembership(principal.getName(), chatId)) {
         throw new ChatroomAccessException("Provided chatroom id either doesn't exist or you are not a member of it");
       }
-      Optional<UserRole> inviter = chatroomRepo.findById(chatId).get().users().stream().filter((u) -> u.userId() == principal.getName()).findFirst();
-      if (inviter.get().role() != "ADMIN") {
+      Optional<UserRole> inviter = chatroomRepo.findById(chatId).get().users().stream().filter((u) -> Objects.equals(u.userId(), principal.getName())).findFirst();
+      if (!Objects.equals(inviter.get().role(), "ADMIN")) {
         throw new ChatroomAccessException("You are not an admin of the chatroom you are inviting the user into");
       }
       ChatUser invitee = userRepo
