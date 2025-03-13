@@ -16,17 +16,25 @@ import java.util.List;
 
 @Service
 public class MessagePersistingService {
+  private final int RECENT_MESSAGE_COUNT = 10;
   private final Logger logger = LoggerFactory.getLogger(MessagePersistingService.class);
   final String sendMsgTopic = "${chatapp.kafka.message-topic}";
   @Autowired
   ChatMessageRepository messageRepository;
   @Autowired
-  RedisTemplate<String, List<ProcessedMessageDTO>> chatMessageCacheTemplate;
+  RedisTemplate<String, ProcessedMessageDTO> chatMessageCacheTemplate;
 
   @KafkaListener(id = "messagePersister", topics = sendMsgTopic)
   public void persistMessage(ProcessedMessageDTO message) {
     logger.info("persisting message sent from {} to chatroom {} at {}", message.senderId(), message.chatroomId(), Instant.now());
-    chatMessageCacheTemplate.opsForList().leftPush("chatroom-" + message.chatroomId(), Collections.singletonList(message));
+    chatMessageCacheTemplate.opsForList().leftPush("chatroom-" + message.chatroomId(), message);
     messageRepository.save(new ChatMessage(null, message.senderId(), message.chatroomId(), Instant.now(), message.message()));
   }
+//  public List<ProcessedMessageDTO> getRecentMessages(String chatroomId) {
+//    if (chatMessageCacheTemplate.hasKey(chatroomId)) {
+//      if (chatMessageCacheTemplate.opsForList().size(chatroomId) >= RECENT_MESSAGE_COUNT) {
+//        return chatMessageCacheTemplate.opsForList().range(chatroomId, 0, RECENT_MESSAGE_COUNT);
+//      }
+//    }
+//  }
 }
