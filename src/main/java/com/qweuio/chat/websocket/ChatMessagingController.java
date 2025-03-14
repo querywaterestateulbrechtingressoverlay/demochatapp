@@ -20,16 +20,14 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.Headers;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Controller
 public class ChatMessagingController {
@@ -47,17 +45,6 @@ public class ChatMessagingController {
   @Autowired
   SimpMessagingTemplate messagingTemplate;
 
-  boolean checkUserMembership(String userId, String chatroomId) {
-    Optional<Chatroom> destChatroom = chatroomRepo.findById(chatroomId);
-    if (destChatroom.isPresent()) {
-      Optional<UserRole> user = destChatroom.get().users().stream().filter((ur) -> Objects.equals(ur.userId(), userId)).findFirst();
-      if (user.isPresent()) {
-        return true;
-      }
-    }
-    return false;
-  }
-
   void updateUserListForSubscribers(String chatroomId) {
     kafkaService.updateUserList(new ChatUserListDTO(chatroomId,
       chatroomRepo
@@ -65,7 +52,6 @@ public class ChatMessagingController {
         .users().stream()
         .map((ur) -> userRepo.findById(ur.userId()).orElseThrow(() -> new RuntimeException("wtf")))
         .map(Converters::toDTO).toList()));
-
   }
 
   void updateChatroomListForSubscriber(String userId) {
@@ -78,7 +64,7 @@ public class ChatMessagingController {
   }
 
   @MessageMapping("/getAvailableChatrooms")
-  public void getChatrooms(Principal principal) {
+  public void getChatrooms(@Headers Map<String, String> headers, Principal principal) {
     updateChatroomListForSubscriber(principal.getName());
   }
 
@@ -86,8 +72,8 @@ public class ChatMessagingController {
   public void sendMessage(@Payload UnprocessedMessageDTO message,
                           @DestinationVariable String chatId,
                           Principal principal) {
-    Optional<UserRole> asd = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
-    if (!checkUserMembership(principal.getName(), chatId)) {
+    Optional<UserRole> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
+    if (messageSender.isEmpty()) {
       messagingTemplate.convertAndSendToUser(principal.getName(), "/system", "Provided chatroom id either doesn't exist or you don't have the rights to post there");
     } else {
       kafkaService.sendMessage(new ProcessedMessageDTO(principal.getName(), chatId, message.message()));
@@ -97,7 +83,8 @@ public class ChatMessagingController {
   public void getRecentHistory(@Payload MessageHistoryRequestDTO messageRequest,
                                @DestinationVariable String chatId,
                                Principal principal) {
-    if (!checkUserMembership(principal.getName(), chatId)) {
+    Optional<UserRole> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
+    if (messageSender.isEmpty()) {
       messagingTemplate.convertAndSendToUser(principal.getName(), "/system", "Provided chatroom id either doesn't exist or you don't have the rights to post there");
     } else {
       List<ChatMessage> foundMessages = messageRequest.beforeMessageId() == null ?
@@ -108,7 +95,8 @@ public class ChatMessagingController {
   @MessageMapping("/{chatId}/getUsers")
   public void getUsers(@DestinationVariable String chatId,
                        Principal principal) {
-    if (!checkUserMembership(principal.getName(), chatId)) {
+    Optional<UserRole> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
+    if (messageSender.isEmpty()) {
       messagingTemplate.convertAndSendToUser(principal.getName(), "/system", "Provided chatroom id either doesn't exist or you don't have the rights to post there");
     } else {
       kafkaService.updateUserList(new ChatUserListDTO(chatId,
@@ -139,10 +127,11 @@ public class ChatMessagingController {
   @MessageMapping("/{chatId}/delete")
   void deleteChat(@DestinationVariable String chatId, Principal principal) {
     try {
+      Optional<UserRole> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
+
+      if (messageSender.isEmpty() || !Objects.equals(messageSender.get().role(), "ADMIN")) throw new ChatroomAccessException("Insufficient permissions");
+
       List<UserRole> chatUsers = chatroomRepo.findById(chatId).orElseThrow(() -> new ChatroomAccessException("Chatroom " + chatId + " couldn't be found")).users();
-      chatUsers.stream()
-        .filter((ur) -> Objects.equals(ur.userId(), principal.getName()) && Objects.equals(ur.role(), "ADMIN"))
-        .findAny().orElseThrow(() -> new ChatroomAccessException("You don't have the permission to delete this chatroom"));
       chatroomRepo.deleteById(chatId);
       mongoTemplate.updateFirst(
         new Query(Criteria.where("_id").is(principal)),
@@ -157,13 +146,9 @@ public class ChatMessagingController {
                         @DestinationVariable String chatId,
                         Principal principal) {
     try {
-      if (!checkUserMembership(principal.getName(), chatId)) {
-        throw new ChatroomAccessException("Provided chatroom id either doesn't exist or you are not a member of it");
-      }
-      Optional<UserRole> inviter = chatroomRepo.findById(chatId).get().users().stream().filter((u) -> Objects.equals(u.userId(), principal.getName())).findFirst();
-      if (!Objects.equals(inviter.get().role(), "ADMIN")) {
-        throw new ChatroomAccessException("You are not an admin of the chatroom you are inviting the user into");
-      }
+      Optional<UserRole> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
+      if (messageSender.isEmpty() || !Objects.equals(messageSender.get().role(), "ADMIN")) throw new ChatroomAccessException("Insufficient permissions");
+
       ChatUser invitee = userRepo
         .findById(userToInvite.userId())
         .orElseThrow(() -> new UserNotFoundException(userToInvite.userId()));
@@ -196,27 +181,22 @@ public class ChatMessagingController {
                         @DestinationVariable String chatId,
                         Principal principal) {
     try {
-      if (!checkUserMembership(principal.getName(), chatId)) {
-        throw new ChatroomAccessException("Provided chatroom id either doesn't exist or you are not a member of it");
-      }
-      Optional<UserRole> kickingUser = chatroomRepo.findById(chatId).get().users().stream().filter((u) -> Objects.equals(u.userId(), principal.getName())).findFirst();
-      if (!Objects.equals(kickingUser.get().role(), "ADMIN")) {
-        throw new ChatroomAccessException("You are not an admin of the chatroom you are kicking the user from");
-      }
-      Optional<UserRole> kickedUser = chatroomRepo.findById(chatId).get().users().stream().filter((u) -> Objects.equals(u.userId(), userToKick.userId())).findFirst();
-      if (kickedUser.isEmpty()) {
-        throw new UserNotFoundException(userToKick.userId());
-      }
-      if (kickedUser.get().role().equals("ADMIN")) {
-        throw new RuntimeException("Can't kick an admin user from the chatroom");
+      Optional<UserRole> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
+      Optional<UserRole> kickTarget = chatroomRepo.getUserRoleFromChatroomById(chatId, userToKick.userId());
+
+      if (messageSender.isEmpty() ||
+        !Objects.equals(messageSender.get().role(), "ADMIN") ||
+        kickTarget.isEmpty() ||
+        Objects.equals(kickTarget.get().role(), "ADMIN)")) {
+        throw new ChatroomAccessException("Insufficient permissions");
       }
       mongoTemplate.updateFirst(
-        new Query(Criteria.where("_id").is(kickedUser.get().userId())),
+        new Query(Criteria.where("_id").is(kickTarget.get().userId())),
         new Update().pull("chatroomIds", chatId),
         "users");
       mongoTemplate.updateFirst(
         new Query(Criteria.where("_id").is(chatId)),
-        new Update().pull("users", Query.query(Criteria.where("userId").is(kickedUser.get().userId()))),
+        new Update().pull("users", Query.query(Criteria.where("userId").is(kickTarget.get().userId()))),
         "chatrooms");
       updateUserListForSubscribers(chatId);
       updateChatroomListForSubscriber(userToKick.userId());

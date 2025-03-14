@@ -1,0 +1,16 @@
+services:
+  mongo-db:
+    build:
+      dockerfile: Dockerfile
+    ports:
+     - 27017:27017
+    volumes:
+     - ./init-scripts/init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+  redis:
+    image: redis:latest
+    ports:
+     - 6379:6379
+  kafka:
+    image: apache/kafka:latest
+    ports:
+     - 9092:9092

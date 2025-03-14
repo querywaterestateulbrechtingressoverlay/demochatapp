@@ -2,12 +2,17 @@ package com.qweuio.chat.persistence.repository;
 
 import com.qweuio.chat.persistence.entity.Chatroom;
 import com.qweuio.chat.persistence.entity.UserRole;
+import org.springframework.data.mongodb.repository.Aggregation;
 import org.springframework.data.mongodb.repository.MongoRepository;
-import org.springframework.data.mongodb.repository.Query;
 
 import java.util.Optional;
 
 public interface ChatroomRepository extends MongoRepository<Chatroom, String> {
-  @Query(value = "{ id = ?0 }", fields = "{ users: { $elemMatch: { userId: ?1 } } }")
+  @Aggregation({
+    "{ $match : { '_id' : '?0' } }",
+    "{ $unwind : '$users' }",
+    "{ $match : { 'users.userId' : '?1' } }",
+    "{ $project : { _id: 0, userId: '$users.userId', role: '$users.role' } }"
+  })
   Optional<UserRole> getUserRoleFromChatroomById(String chatroomId, String userId);
 }
