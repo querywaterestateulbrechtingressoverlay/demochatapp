@@ -86,6 +86,7 @@ public class ChatMessagingController {
   public void sendMessage(@Payload UnprocessedMessageDTO message,
                           @DestinationVariable String chatId,
                           Principal principal) {
+    Optional<UserRole> asd = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
     if (!checkUserMembership(principal.getName(), chatId)) {
       messagingTemplate.convertAndSendToUser(principal.getName(), "/system", "Provided chatroom id either doesn't exist or you don't have the rights to post there");
     } else {
