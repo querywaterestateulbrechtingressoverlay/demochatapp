@@ -19,4 +19,11 @@ public class RedisConfig {
     template.setDefaultSerializer(RedisSerializer.json());
     return template;
   }
+  @Bean
+  public RedisTemplate<String, String> redisTemplate2(RedisConnectionFactory connectionFactory) {
+    RedisTemplate<String, String> template = new RedisTemplate<>();
+    template.setConnectionFactory(connectionFactory);
+    template.setDefaultSerializer(RedisSerializer.json());
+    return template;
+  }
 }
