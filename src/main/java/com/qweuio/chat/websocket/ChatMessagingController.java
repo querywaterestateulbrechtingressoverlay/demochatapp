@@ -101,12 +101,9 @@ public class ChatMessagingController {
     if (messageSender.isEmpty()) {
       messagingTemplate.convertAndSendToUser(principal.getName(), "/system", "Provided chatroom id either doesn't exist or you don't have the rights to post there");
     } else {
+      List<ChatUser> users = chatroomRepo.getUsersByChatroom(chatId);
       kafkaService.updateUserList(new ChatUserListDTO(chatId,
-        chatroomRepo
-        .findById(chatId).orElseThrow(() -> new RuntimeException("wtf"))
-        .users().stream()
-        .map((ur) -> userRepo.findById(ur.userId()).orElseThrow(() -> new RuntimeException("wtf")))
-        .map(Converters::toDTO).toList()));
+        users.stream().map(Converters::toDTO).toList()));
     }
   }
   @MessageMapping("/create")
