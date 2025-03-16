@@ -14,6 +14,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
@@ -24,6 +25,8 @@ import java.util.UUID;
 @Service
 public class MessagePersistingService {
   private final int RECENT_MESSAGE_COUNT = 10;
+  private final String CACHED_CHATROOMS = "cached-chatrooms";
+  private final String CHATROOM_PREFIX = "chatroom:";
   private final Logger logger = LoggerFactory.getLogger(MessagePersistingService.class);
   final String sendMsgTopic = "${chatapp.kafka.message-topic}";
   @Autowired
@@ -36,12 +39,12 @@ public class MessagePersistingService {
 
   @Scheduled(fixedRate = 600000)
   public void trimCache() {
-    try (Cursor<String> cursor = chatKeyIndexTemplate.opsForSet().scan("cached-chatrooms", ScanOptions.NONE)) {
+    try (Cursor<String> cursor = chatKeyIndexTemplate.opsForSet().scan(CACHED_CHATROOMS, ScanOptions.NONE)) {
       cursor.forEachRemaining((chatroomId) -> {
         if (!chatKeyIndexTemplate.hasKey(chatroomId)) {
-          chatKeyIndexTemplate.opsForSet().remove("cached-chatrooms", chatroomId);
+          chatKeyIndexTemplate.opsForSet().remove(CACHED_CHATROOMS, chatroomId);
         } else {
-          chatMessageCacheTemplate.opsForList().trim("chatroom:" + chatroomId, 0, 10);
+          chatMessageCacheTemplate.opsForList().trim(CHATROOM_PREFIX + chatroomId, 0, 10);
         }
       });
     }
@@ -49,20 +52,18 @@ public class MessagePersistingService {
   @KafkaListener(id = "messagePersister", topics = sendMsgTopic)
   public void persistMessage(ProcessedMessageDTO message) {
     logger.info("persisting message sent from {} to chatroom {} at {}", message.senderId(), message.chatroomId(), Instant.now());
-    if (chatMessageCacheTemplate.opsForList().leftPush("chatroom:" + message.chatroomId(), message) == 1) {
-      chatKeyIndexTemplate.opsForSet().add("cached-chatrooms", message.chatroomId());
+    if (chatMessageCacheTemplate.opsForList().leftPush(CHATROOM_PREFIX + message.chatroomId(), message) == 1) {
+      chatKeyIndexTemplate.opsForSet().add(CACHED_CHATROOMS, message.chatroomId());
     }
-//    chatMessageCacheTemplate.opsForList().trim("chatroom:" + )
+    chatMessageCacheTemplate.expire(CHATROOM_PREFIX + message.chatroomId(), Duration.ofHours(3));
     messageRepository.save(new ChatMessage(null, message.senderId(), message.chatroomId(), Instant.now(), message.message()));
   }
 //  public List<ProcessedMessageDTO> getRecentMessages(String chatroomId) {
-//
-//
-//    chatMessageCacheTemplate.opsForList().
 //    if (chatMessageCacheTemplate.hasKey(chatroomId)) {
-//      if (chatMessageCacheTemplate.opsForList().size(chatroomId) >= RECENT_MESSAGE_COUNT) {
+//      if (chatMessageCacheTemplate.opsForList().size(chatroomId) > 0) {
 //        return chatMessageCacheTemplate.opsForList().range(chatroomId, 0, RECENT_MESSAGE_COUNT);
 //      }
 //    }
+//
 //  }
 }
