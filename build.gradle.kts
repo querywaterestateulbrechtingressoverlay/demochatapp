@@ -18,6 +18,7 @@ repositories {
 }
 
 dependencies {
+	implementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.18.3")
 	implementation("org.springframework.kafka:spring-kafka")
 	implementation("org.springframework.boot:spring-boot-starter-oauth2-resource-server")
 	implementation("org.springframework.security:spring-security-messaging:6.4.3")

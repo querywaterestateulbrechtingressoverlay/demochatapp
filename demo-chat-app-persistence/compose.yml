@@ -10,6 +10,9 @@ services:
     image: redis:latest
     ports:
      - 6379:6379
+    volumes:
+      - ./init-scripts/redis.conf:/usr/local/etc/redis/redis.conf
+    entrypoint: redis-server /usr/local/etc/redis/redis.conf
   kafka:
     image: apache/kafka:latest
     ports:

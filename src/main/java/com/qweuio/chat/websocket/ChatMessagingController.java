@@ -1,6 +1,7 @@
 package com.qweuio.chat.websocket;
 
 import com.qweuio.chat.messaging.KafkaService;
+import com.qweuio.chat.persistence.MessagePersistingService;
 import com.qweuio.chat.persistence.entity.ChatMessage;
 import com.qweuio.chat.persistence.entity.ChatUser;
 import com.qweuio.chat.persistence.entity.UserRole;
@@ -27,6 +28,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.time.Instant;
 import java.util.*;
 
 @Controller
@@ -40,6 +42,8 @@ public class ChatMessagingController {
   MongoTemplate mongoTemplate;
   @Autowired
   ChatMessageRepository messageRepo;
+  @Autowired
+  MessagePersistingService messagePersistingService;
   @Autowired
   KafkaService kafkaService;
   @Autowired
@@ -76,7 +80,7 @@ public class ChatMessagingController {
     if (messageSender.isEmpty()) {
       messagingTemplate.convertAndSendToUser(principal.getName(), "/system", "Provided chatroom id either doesn't exist or you don't have the rights to post there");
     } else {
-      kafkaService.sendMessage(new ProcessedMessageDTO(principal.getName(), chatId, message.message()));
+      kafkaService.sendMessage(new ProcessedMessageDTO(principal.getName(), chatId, Instant.now(), message.message()));
     }
   }
   @MessageMapping("/{chatId}/getRecentHistory")
@@ -87,9 +91,7 @@ public class ChatMessagingController {
     if (messageSender.isEmpty()) {
       messagingTemplate.convertAndSendToUser(principal.getName(), "/system", "Provided chatroom id either doesn't exist or you don't have the rights to post there");
     } else {
-      List<ChatMessage> foundMessages = messageRequest.beforeMessageId() == null ?
-        messageRepo.findTop10ByChatroomId(chatId) :
-        messageRepo.findTop10ByChatroomIdAndIdLessThan(chatId, messageRequest.beforeMessageId());
+      messagingTemplate.convertAndSendToUser(principal.getName(), "/chatrooms/messages", new ChatHistoryResponseDTO(chatId, messagePersistingService.getRecentMessages(chatId)));
     }
   }
   @MessageMapping("/{chatId}/getUsers")

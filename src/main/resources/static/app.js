@@ -1,4 +1,3 @@
- 
 const websocketUrl = "ws://localhost:8080/websocket";
 const backendUrl = "http://localhost:8080";
 const jwtEndpoint = "/token";
@@ -8,25 +7,27 @@ const cachedUsers = new Map();
 const cachedMessages = new Map();
 var jwttoken;
 const stompClient = new StompJs.Client({
-    brokerURL: websocketUrl
+  brokerURL: websocketUrl
 });
 var userId;
 const fetchHeaders = new Headers();
 
 stompClient.onConnect = (frame) => {
-    setConnected(true);
-    console.log('Connected: ' + frame);
-    stompClient.subscribe('/user/' + userId + '/messages', (messageDTO) => {
-      showMessage(JSON.parse(messageDTO.body));
-    });
-    stompClient.subscribe("/user/" + userId + "/userlist", (userList) => {
-      updateUserList(JSON.parse(userList.body));
-    });
-    stompClient.subscribe("/user/" + userId + "/chatrooms", (chatroomList) => {
-      updateChatroomList(JSON.parse(chatroomList.body).chatrooms);
-    });
-    requestChatroomListUpdate();
-    switchChatrooms(chatrooms.keys().next().value);
+  setConnected(true);
+  console.log('Connected: ' + frame);
+  stompClient.subscribe('/user/' + userId + '/messages', (messageDTO) => {
+    receiveNewMessage(JSON.parse(messageDTO.body));
+  });
+  stompClient.subscribe("/user/" + userId + "/userlist", (userList) => {
+    receiveUserListUpdate(JSON.parse(userList.body));
+  });
+  stompClient.subscribe("/user/" + userId + "/chatrooms", (chatroomList) => {
+    receiveChatroomListUpdate(JSON.parse(chatroomList.body).chatrooms);
+  });
+  stompClient.subscribe("/user/" + userId + "/chatrooms/messages", (chatroomHistory) => {
+    receieveChatHistoryUpdate(JSON.parse(chatroomHistory.body).chatId, JSON.parse(chatroomHistory.body).messageList);
+  });
+  requestChatroomListUpdate();
 };
 
 stompClient.onWebSocketError = (error) => {
@@ -34,39 +35,39 @@ stompClient.onWebSocketError = (error) => {
 };
 
 stompClient.onStompError = (frame) => {
-    console.error('Broker reported error: ' + frame.headers['message']);
-    console.error('Additional details: ' + frame.body);
+  console.error('Broker reported error: ' + frame.headers['message']);
+  console.error('Additional details: ' + frame.body);
 };
 
 function setConnected(connected) {
-    $("#connect").prop("disabled", connected);
-    $("#disconnect").prop("disabled", !connected);
-    if (connected) {
-        $("#conversation").show();
-    } else {
-        $("#conversation").hide();
-    }
-    $("#greetings").html("");
+  $("#connect").prop("disabled", connected);
+  $("#disconnect").prop("disabled", !connected);
+  if (connected) {
+    $("#conversation").show();
+  } else {
+    $("#conversation").hide();
+  }
+  $("#greetings").html("");
 }
 
 function connect() {
-    stompClient.activate();
+  stompClient.activate();
 }
 
 function disconnect() {
-    stompClient.deactivate();
-    setConnected(false);
-    console.log("Disconnected");
+  stompClient.deactivate();
+  setConnected(false);
+  console.log("Disconnected");
 }
 
 function sendMessage() {
-    stompClient.publish({
-        destination: "/chat/" + currentChatroom + "/send",
-        body: JSON.stringify({'message': $("#message").val()})
-    });
+  stompClient.publish({
+    destination: "/chat/" + currentChatroom + "/send",
+    body: JSON.stringify({'message': $("#message").val()})
+  });
 }
 
-function requestUserListUpdate() {
+function requestChatUserListUpdate() {
   stompClient.publish({
     destination: "/chat/" + currentChatroom + "/getUsers"
   });
@@ -86,14 +87,14 @@ function showUserList(chatroomId) {
   }
 }
 
-function updateUserList(userList) {
-    cachedUsers.set(userList.chatId, userList.users);
-    if (currentChatroom == userList.chatId) {
-      showUserList(userList.chatId);
-    }
+function receiveUserListUpdate(userList) {
+  cachedUsers.set(userList.chatId, userList.users);
+  if (currentChatroom == userList.chatId) {
+    showUserList(userList.chatId);
+  }
 }
 
-function updateChatroomList(chatroomList) {
+function receiveChatroomListUpdate(chatroomList) {
   $("#chatroom-list").empty();
   chatrooms.clear();
   for (const chatroom of chatroomList) {
@@ -102,81 +103,113 @@ function updateChatroomList(chatroomList) {
       .append("<tr><td data-roomId=\"" + chatroom.id + "\" id=\"chatroom-"
       + chatroom.id + "\" class=\"chatroom\">" + chatroom.name + "</td></tr>");
   }
+  if (currentChatroom == null || !chatrooms.has(currentChatroom)) {
+    if (!chatrooms.has(currentChatroom)) {
+      cachedMessages.delete(currentChatroom);
+      cachedUsers.delete(currentChatroom);
+    }
+    currentChatroom = chatrooms.keys().next().value;
+    switchChatrooms(currentChatroom);
+  }
 }
 
-function showMessage(message) {
-    if (!cachedMessages.has(message.chatroomId)) {
-        cachedMessages.set(message.chatroomId, []);
-    }
-    cachedMessages.get(message.chatroomId).push({
-        message: message.message,
-        senderId: message.senderId
-    });
-    if (message.chatroomId == currentChatroom) {
-        $("#message-list").append("<tr><td>" + message.senderId + ":" + message.message + "</td></tr>");
-    }
+function receiveNewMessage(message) {
+  if (!cachedMessages.has(message.chatroomId)) {
+    cachedMessages.set(message.chatroomId, []);
+  }
+  cachedMessages.get(message.chatroomId).push({
+    message: message.message,
+    senderId: message.senderId
+  });
+  if (message.chatroomId == currentChatroom) {
+    $("#message-list").append("<tr><td>" + message.senderId + " at " + message.sentAt + ":" + message.message + "</td></tr>");
+  }
 }
 
-function switchChatrooms(newChatroomId) {
+function showCachedMessages(newChatroomId) {
   $("#message-list").empty();
-  if (cachedMessages.has(newChatroomId)) {
-    for (const message of cachedMessages.get(newChatroomId)) {
-      $("#message-list").append("<tr><td>" + message.senderId + ": " + message.message + "</td></tr>");
-    }
+  for (const message of cachedMessages.get(newChatroomId)) {
+    $("#message-list").append("<tr><td>" + message.senderId + ":" + message.message + "</td></tr>");
   }
-  if (!cachedUsers.has(newChatroomId)) {
-    requestUserListUpdate();
+}
+
+function requestChatHistoryUpdate(chatroomId) {
+  stompClient.publish({
+    destination: "/chat/" + chatroomId + "/getRecentHistory",
+    body: JSON.stringify({'beforeMessageId': null})
+  });
+}
+
+function receieveChatHistoryUpdate(chatroomId, messageList) {
+  if (!cachedMessages.has(chatroomId)) {
+    cachedMessages.set(chatroomId, []);
   }
+  cachedMessages.get(chatroomId).push(...messageList);
+  if (chatroomId == currentChatroom) {
+    messageList.forEach((message) => {
+      $("#message-list").append("<tr><td>" + message.senderId + " at " + message.sentAt + ":" + message.message + "</td></tr>");
+    });
+  }
+}
+
+function switchChatrooms(chatroomId) {
+  if (!cachedMessages.has(chatroomId)) {
+    requestChatHistoryUpdate(chatroomId);
+  }
+  if (!cachedUsers.has(chatroomId)) {
+    requestChatUserListUpdate();
+  }
+  showCachedMessages();
 }
 
 async function login() {
-    try {
-        fetchHeaders.set("Authorization", "Basic " + btoa($("#login-username").val() + ":" + $("#login-password").val()));
-        const jwtResponse = (await (await fetch(backendUrl + jwtEndpoint, {
-            method: "POST",
-            headers: fetchHeaders
-        })).json());
-        userId = jwtResponse.id;
-        fetchHeaders.set("Authorization", "Bearer " + jwtResponse.token);
+  try {
+    fetchHeaders.set("Authorization", "Basic " + btoa($("#login-username").val() + ":" + $("#login-password").val()));
+    const jwtResponse = (await (await fetch(backendUrl + jwtEndpoint, {
+      method: "POST",
+      headers: fetchHeaders
+    })).json());
+    userId = jwtResponse.id;
+    fetchHeaders.set("Authorization", "Bearer " + jwtResponse.token);
 
-        $("#login-form").empty();
-        $("#login-form").append("<p>Logged in as " + $("#login").val());
-        stompClient.connectHeaders['Authorization'] = jwtResponse.token;
+    $("#login-form").empty();
+    $("#login-form").append("<p>Logged in as " + $("#login").val());
+    stompClient.connectHeaders['Authorization'] = jwtResponse.token;
 
-        connect();
-    } catch (error) {
-        console.error(error);
-    }
+    connect();
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 function inviteUser() {
-    const userIdToInvite = $("#invite-user-id").val();
-    stompClient.publish({
-        destination: "/chat/" + currentChatroom + "/invite",
-        body: JSON.stringify({'userId': userIdToInvite})
-    });
+  const userIdToInvite = $("#invite-user-id").val();
+  stompClient.publish({
+    destination: "/chat/" + currentChatroom + "/invite",
+    body: JSON.stringify({'userId': userIdToInvite})
+  });
 }
 
 function kickUser(userId) {
-    stompClient.publish({
-        destination: "/chat/" + currentChatroom + "/kick",
-        body: JSON.stringify({'userId': userId})
-    });
+  stompClient.publish({
+    destination: "/chat/" + currentChatroom + "/kick",
+    body: JSON.stringify({'userId': userId})
+  });
 }
 
 $(function () {
-    $(document).on("click", ".chatroom", function() {
-        currentChatroom = $(this).data("roomid");
-        switchChatrooms($(this).data("roomid"));
-    });
-    $("#login-submit").click(async () => await login());
-    $("#invite-submit").click(() => inviteUser());
-    $(document).on("click", ".kick-user", function() {
-        const userId = $(this).data("userid");
-        kickUser(userId);
-    });
-    $("form").on('submit', (e) => e.preventDefault());
-    $("#connect").click(() => connect());
-    $("#disconnect").click(() => disconnect());
-    $("#send").click(() => sendMessage());
+  $(document).on("click", ".chatroom", function() {
+    currentChatroom = $(this).data("roomid");
+    switchChatrooms($(this).data("roomid"));
+  });
+  $("#login-submit").click(async () => await login());
+  $("#invite-submit").click(() => inviteUser());
+  $(document).on("click", ".kick-user", function() {
+    const userId = $(this).data("userid");
+    kickUser(userId);
+  });
+  $("form").on('submit', (e) => e.preventDefault());
+  $("#connect").click(() => connect());
+  $("#disconnect").click(() => disconnect());
+  $("#send").click(() => sendMessage());
 });

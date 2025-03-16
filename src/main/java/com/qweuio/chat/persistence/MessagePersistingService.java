@@ -2,6 +2,7 @@ package com.qweuio.chat.persistence;
 
 import com.qweuio.chat.persistence.entity.ChatMessage;
 import com.qweuio.chat.persistence.repository.ChatMessageRepository;
+import com.qweuio.chat.websocket.dto.Converters;
 import com.qweuio.chat.websocket.dto.ProcessedMessageDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +42,7 @@ public class MessagePersistingService {
   public void trimCache() {
     try (Cursor<String> cursor = chatKeyIndexTemplate.opsForSet().scan(CACHED_CHATROOMS, ScanOptions.NONE)) {
       cursor.forEachRemaining((chatroomId) -> {
-        if (!chatKeyIndexTemplate.hasKey(chatroomId)) {
+        if (!chatKeyIndexTemplate.hasKey(CHATROOM_PREFIX + chatroomId)) {
           chatKeyIndexTemplate.opsForSet().remove(CACHED_CHATROOMS, chatroomId);
         } else {
           chatMessageCacheTemplate.opsForList().trim(CHATROOM_PREFIX + chatroomId, 0, 10);
@@ -49,21 +50,34 @@ public class MessagePersistingService {
       });
     }
   }
-  @KafkaListener(id = "messagePersister", topics = sendMsgTopic)
-  public void persistMessage(ProcessedMessageDTO message) {
-    logger.info("persisting message sent from {} to chatroom {} at {}", message.senderId(), message.chatroomId(), Instant.now());
+  public void cacheMessage(ProcessedMessageDTO message) {
     if (chatMessageCacheTemplate.opsForList().leftPush(CHATROOM_PREFIX + message.chatroomId(), message) == 1) {
       chatKeyIndexTemplate.opsForSet().add(CACHED_CHATROOMS, message.chatroomId());
     }
-    chatMessageCacheTemplate.expire(CHATROOM_PREFIX + message.chatroomId(), Duration.ofHours(3));
-    messageRepository.save(new ChatMessage(null, message.senderId(), message.chatroomId(), Instant.now(), message.message()));
+    chatMessageCacheTemplate.expire(CHATROOM_PREFIX + message.chatroomId(), Duration.ofMinutes(5));
   }
-//  public List<ProcessedMessageDTO> getRecentMessages(String chatroomId) {
-//    if (chatMessageCacheTemplate.hasKey(chatroomId)) {
-//      if (chatMessageCacheTemplate.opsForList().size(chatroomId) > 0) {
-//        return chatMessageCacheTemplate.opsForList().range(chatroomId, 0, RECENT_MESSAGE_COUNT);
-//      }
-//    }
-//
-//  }
+
+  @KafkaListener(id = "messagePersister", topics = sendMsgTopic)
+  public void persistMessage(ProcessedMessageDTO message) {
+    logger.info("persisting message sent from {} to chatroom {} at {}", message.senderId(), message.chatroomId(), Instant.now());
+    cacheMessage(message);
+    messageRepository.save(new ChatMessage(null, message.senderId(), message.chatroomId(), message.sentAt(), message.message()));
+  }
+
+  public List<ProcessedMessageDTO> getRecentMessages(String chatroomId) {
+    if (chatKeyIndexTemplate.opsForSet().isMember(CACHED_CHATROOMS, chatroomId)) {
+      List<ProcessedMessageDTO> cachedMessages = chatMessageCacheTemplate.opsForList().range(CHATROOM_PREFIX + chatroomId, 0, RECENT_MESSAGE_COUNT);
+      if (!cachedMessages.isEmpty()) {
+        return cachedMessages;
+      } else {
+        chatKeyIndexTemplate.opsForSet().remove(CACHED_CHATROOMS, CHATROOM_PREFIX + chatroomId);
+      }
+    }
+    List<ProcessedMessageDTO> persistedMessages = messageRepository.findTop10ByChatroomId(chatroomId)
+      .stream()
+      .map(Converters::toDTO)
+      .toList();
+    persistedMessages.forEach(this::cacheMessage);
+    return persistedMessages;
+  }
 }
