@@ -1,5 +1,5 @@
-const websocketUrl = "ws://localhost:8080/websocket";
-const backendUrl = "http://localhost:8080";
+const websocketUrl = "ws:///websocket";
+const backendUrl = "/ws";
 const jwtEndpoint = "/token";
 var currentChatroom;
 const chatrooms = new Map();
@@ -171,6 +171,11 @@ async function login() {
     })).json());
     userId = jwtResponse.id;
     fetchHeaders.set("Authorization", "Bearer " + jwtResponse.token);
+
+    (await (await fetch("/ipaddress"))).text().then((ip) => {
+      stompClient.brokerURL = "ws/websocket";
+    });
+
 
     $("#login-form").empty();
     $("#login-form").append("<p>Logged in as " + $("#login").val());
