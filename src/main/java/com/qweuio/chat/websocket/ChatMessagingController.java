@@ -1,18 +1,19 @@
 package com.qweuio.chat.websocket;
 
+import com.qweuio.chat.core.exception.ChatroomNotFoundException;
 import com.qweuio.chat.messaging.KafkaService;
 import com.qweuio.chat.persistence.MessagePersistingService;
-import com.qweuio.chat.persistence.entity.ChatMessage;
 import com.qweuio.chat.persistence.entity.ChatUser;
-import com.qweuio.chat.persistence.entity.UserRole;
+import com.qweuio.chat.persistence.entity.UserWithRoleEntity;
 import com.qweuio.chat.persistence.repository.ChatMessageRepository;
 import com.qweuio.chat.persistence.repository.ChatUserRepository;
 import com.qweuio.chat.websocket.dto.*;
 import com.qweuio.chat.persistence.entity.Chatroom;
 import com.qweuio.chat.persistence.repository.ChatroomRepository;
-import com.qweuio.chat.websocket.exception.ChatroomAccessException;
-import com.qweuio.chat.websocket.exception.TooManyChatroomsException;
-import com.qweuio.chat.websocket.exception.UserNotFoundException;
+import com.qweuio.chat.core.exception.ChatroomAccessException;
+import com.qweuio.chat.core.exception.InsufficientPermissionsException;
+import com.qweuio.chat.core.exception.TooManyChatroomsException;
+import com.qweuio.chat.core.exception.UserNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +27,7 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import java.security.Principal;
 import java.time.Instant;
@@ -48,6 +50,19 @@ public class ChatMessagingController {
   KafkaService kafkaService;
   @Autowired
   SimpMessagingTemplate messagingTemplate;
+
+  @ExceptionHandler({UserNotFoundException.class})
+  void userNotFound() {
+
+  }
+  @ExceptionHandler({ChatroomAccessException.class})
+  void chatroomNotFound() {
+
+  }
+  @ExceptionHandler({InsufficientPermissionsException.class})
+  void insufficientPermissions() {
+
+  }
 
   void updateUserListForSubscribers(String chatroomId) {
     kafkaService.updateUserList(new ChatUserListDTO(chatroomId,
@@ -76,7 +91,7 @@ public class ChatMessagingController {
   public void sendMessage(@Payload UnprocessedMessageDTO message,
                           @DestinationVariable String chatId,
                           Principal principal) {
-    Optional<UserRole> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
+    Optional<UserWithRoleEntity> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
     if (messageSender.isEmpty()) {
       messagingTemplate.convertAndSendToUser(principal.getName(), "/system", "Provided chatroom id either doesn't exist or you don't have the rights to post there");
     } else {
@@ -87,7 +102,7 @@ public class ChatMessagingController {
   public void getRecentHistory(@Payload MessageHistoryRequestDTO messageRequest,
                                @DestinationVariable String chatId,
                                Principal principal) {
-    Optional<UserRole> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
+    Optional<UserWithRoleEntity> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
     if (messageSender.isEmpty()) {
       messagingTemplate.convertAndSendToUser(principal.getName(), "/system", "Provided chatroom id either doesn't exist or you don't have the rights to post there");
     } else {
@@ -97,7 +112,7 @@ public class ChatMessagingController {
   @MessageMapping("/{chatId}/getUsers")
   public void getUsers(@DestinationVariable String chatId,
                        Principal principal) {
-    Optional<UserRole> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
+    Optional<UserWithRoleEntity> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
     if (messageSender.isEmpty()) {
       messagingTemplate.convertAndSendToUser(principal.getName(), "/system", "Provided chatroom id either doesn't exist or you don't have the rights to post there");
     } else {
@@ -112,7 +127,7 @@ public class ChatMessagingController {
       String newChatroomId = chatroomRepo.save(
         new Chatroom(
           null, chatCreationRequest.chatroomName(),
-          List.of(new UserRole(principal.getName(), "ADMIN")),
+          List.of(new UserWithRoleEntity(principal.getName(), "ADMIN")),
           Collections.emptyList())).id();
       mongoTemplate.updateFirst(
         new Query(Criteria.where("_id").is(principal)),
@@ -126,11 +141,11 @@ public class ChatMessagingController {
   @MessageMapping("/{chatId}/delete")
   void deleteChat(@DestinationVariable String chatId, Principal principal) {
     try {
-      Optional<UserRole> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
+      Optional<UserWithRoleEntity> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
 
       if (messageSender.isEmpty() || !Objects.equals(messageSender.get().role(), "ADMIN")) throw new ChatroomAccessException("Insufficient permissions");
 
-      List<UserRole> chatUsers = chatroomRepo.findById(chatId).orElseThrow(() -> new ChatroomAccessException("Chatroom " + chatId + " couldn't be found")).users();
+      List<UserWithRoleEntity> chatUsers = chatroomRepo.findById(chatId).orElseThrow(() -> new ChatroomAccessException("Chatroom " + chatId + " couldn't be found")).users();
       chatroomRepo.deleteById(chatId);
       mongoTemplate.updateFirst(
         new Query(Criteria.where("_id").is(principal)),
@@ -144,44 +159,15 @@ public class ChatMessagingController {
   void inviteUserToChat(@Payload UserIdDTO userToInvite,
                         @DestinationVariable String chatId,
                         Principal principal) {
-    try {
-      Optional<UserRole> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
-      if (messageSender.isEmpty() || !Objects.equals(messageSender.get().role(), "ADMIN")) throw new ChatroomAccessException("Insufficient permissions");
 
-      ChatUser invitee = userRepo
-        .findById(userToInvite.userId())
-        .orElseThrow(() -> new UserNotFoundException(userToInvite.userId()));
-      if (invitee.chatroomIds().size() < 100) {
-        mongoTemplate.updateFirst(
-          new Query(Criteria.where("_id").is(invitee.id())),
-          new Update().addToSet("chatroomIds", chatId),
-          "users");
-        mongoTemplate.updateFirst(
-          new Query(Criteria.where("_id").is(chatId)),
-          new Update().addToSet("users", new UserRole(invitee.id(), "MEMBER")),
-          "chatrooms");
-        kafkaService.updateUserList(new ChatUserListDTO(chatId,
-          chatroomRepo
-            .findById(chatId).orElseThrow(() -> new RuntimeException("wtf"))
-            .users().stream()
-            .map((ur) -> userRepo.findById(ur.userId()).orElseThrow(() -> new RuntimeException("wtf")))
-            .map(Converters::toDTO).toList()));
-        updateUserListForSubscribers(chatId);
-        updateChatroomListForSubscriber(userToInvite.userId());
-      } else {
-        throw new TooManyChatroomsException("Couldn't invite user because they've reached the chatroom count limit");
-      }
-    } catch (UserNotFoundException | TooManyChatroomsException e) {
-      messagingTemplate.convertAndSendToUser(principal.getName(), "/system", e.getMessage());
-    }
   }
   @MessageMapping("/{chatId}/kick")
   void kickUserFromChat(@Payload UserIdDTO userToKick,
                         @DestinationVariable String chatId,
                         Principal principal) {
     try {
-      Optional<UserRole> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
-      Optional<UserRole> kickTarget = chatroomRepo.getUserRoleFromChatroomById(chatId, userToKick.userId());
+      Optional<UserWithRoleEntity> messageSender = chatroomRepo.getUserRoleFromChatroomById(chatId, principal.getName());
+      Optional<UserWithRoleEntity> kickTarget = chatroomRepo.getUserRoleFromChatroomById(chatId, userToKick.userId());
 
       if (messageSender.isEmpty() ||
         !Objects.equals(messageSender.get().role(), "ADMIN") ||

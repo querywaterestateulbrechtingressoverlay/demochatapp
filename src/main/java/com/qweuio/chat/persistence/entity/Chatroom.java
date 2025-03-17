@@ -10,7 +10,7 @@ public record Chatroom(
     @Id
     String id,
     String name,
-    List<UserRole> users,
+    List<UserWithRoleEntity> users,
     List<String> messageIds
 ) {
 }

@@ -1,6 +1,6 @@
 package com.qweuio.chat.persistence.entity;
 
-public record UserRole(
+public record UserWithRoleEntity(
   String userId,
   String role
 ) {
