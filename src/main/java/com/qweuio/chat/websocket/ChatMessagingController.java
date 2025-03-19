@@ -15,10 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.messaging.handler.annotation.DestinationVariable;
-import org.springframework.messaging.handler.annotation.Headers;
-import org.springframework.messaging.handler.annotation.MessageMapping;
-import org.springframework.messaging.handler.annotation.Payload;
+import org.springframework.messaging.handler.annotation.*;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -40,19 +37,19 @@ public class ChatMessagingController {
   @Autowired
   WebSocketChatMessagingService chatService;
 
-  @ExceptionHandler({UserNotFoundException.class})
+  @MessageExceptionHandler({UserNotFoundException.class})
   void userNotFound() {
 
   }
-  @ExceptionHandler({ChatroomAccessException.class})
+  @MessageExceptionHandler({ChatroomAccessException.class})
   void chatroomNotFound() {
 
   }
-  @ExceptionHandler({InsufficientPermissionsException.class})
+  @MessageExceptionHandler({InsufficientPermissionsException.class})
   void insufficientPermissions() {
-
+    logger.info("hello");
   }
-  @ExceptionHandler({TooManyUsersException.class, TooManyChatroomsException.class})
+  @MessageExceptionHandler({TooManyUsersException.class, TooManyChatroomsException.class})
   void tooManyUsersOrChatrooms() {
 
   }
