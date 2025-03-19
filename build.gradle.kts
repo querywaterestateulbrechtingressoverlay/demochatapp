@@ -7,11 +7,11 @@ plugins {
 group = "com.qweuio"
 version = "0.0.1-SNAPSHOT"
 
-java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(23)
-	}
-}
+//java {
+//	toolchain {
+//		languageVersion = JavaLanguageVersion.of(23)
+//	}
+//}
 
 repositories {
 	mavenCentral()

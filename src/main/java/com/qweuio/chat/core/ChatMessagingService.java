@@ -1,10 +1,14 @@
 package com.qweuio.chat.core;
 
+import com.qweuio.chat.persistence.entity.ChatUser;
+
+import java.util.List;
+
 public interface ChatMessagingService<T, U> {
-  void addUserToChatroom(T userId, U chatroomId);
-  void removeUserFromChatroom(T userId, U chatroomId);
-  void createChatroom(T creatorId, String chatroomName);
+  String createChatroom(T creatorId, String chatroomName);
   void deleteChatroom(T deletingUserId, U chatroomId);
   void addUserToChatroom(T invitingUserId, U chatroomId, T inviteeId);
   void removeUserFromChatroom(T removingUserId, U chatroomId, T removeeId);
+  List<ChatUser> getChatroomUsers(T requestingUserId, U chatroomId);
+  List<ChatUser> getChatroomUsers(U chatroomId);
 }

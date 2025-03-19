@@ -9,6 +9,6 @@ public record ChatUser(
     @Id
     String id,
     String name,
-    List<String> chatroomIds
+    List<String> chatrooms
 ) {
 }
