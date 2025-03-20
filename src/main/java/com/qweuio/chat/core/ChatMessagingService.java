@@ -5,7 +5,7 @@ import com.qweuio.chat.persistence.entity.ChatUser;
 import java.util.List;
 
 public interface ChatMessagingService<T, U> {
-  String createChatroom(T creatorId, String chatroomName);
+  U createChatroom(T creatorId, String chatroomName);
   void deleteChatroom(T deletingUserId, U chatroomId);
   void addUserToChatroom(T invitingUserId, U chatroomId, T inviteeId);
   void removeUserFromChatroom(T removingUserId, U chatroomId, T removeeId);

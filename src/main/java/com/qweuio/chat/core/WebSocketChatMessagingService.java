@@ -36,19 +36,21 @@ public class WebSocketChatMessagingService implements ChatMessagingService<Strin
   @Autowired
   private MongoTemplate mongoTemplate;
 
-
-  public UserRole getUserRole(String userId, String chatroomId) {
+  public boolean verifyUserRole(String userId, String chatroomId, UserRole role) {
     if (!chatUserRepo.existsById(userId)) {
       throw new UserNotFoundException(userId);
     }
-    Optional<UserWithRoleEntity> role = chatroomRepo.getUserRoleFromChatroomById(chatroomId, userId);
-    return role.map(userRoleEntity -> UserRole.valueOf(userRoleEntity.role())).orElse(UserRole.NOT_A_MEMBER);
+    return chatroomRepo
+      .getUserRoleFromChatroomById(chatroomId, userId)
+      .map(userRoleEntity -> UserRole.valueOf(userRoleEntity.role()))
+      .orElse(UserRole.NOT_A_MEMBER)
+      .equals(role);
   }
   public List<Chatroom> getUserChatrooms(String userId) {
     return chatUserRepo.getChatroomsByUser(userId);
   }
   public List<ProcessedMessageDTO> getChatroomRecentHistory(String requestingUserId, String chatroomId) {
-    if (getUserRole(requestingUserId, chatroomId) == UserRole.NOT_A_MEMBER) {
+    if (verifyUserRole(requestingUserId, chatroomId, UserRole.NOT_A_MEMBER)) {
       throw new InsufficientPermissionsException(requestingUserId);
     }
     return msgPersistingService.getRecentMessages(chatroomId);
@@ -56,7 +58,7 @@ public class WebSocketChatMessagingService implements ChatMessagingService<Strin
 
   @Override
   public void addUserToChatroom(String addingUser, String userToAdd, String chatroomId) {
-    if (getUserRole(addingUser, chatroomId) != UserRole.ADMIN) {
+    if (!verifyUserRole(addingUser, chatroomId, UserRole.ADMIN)) {
       throw new InsufficientPermissionsException(addingUser);
     }
     ChatUser chatUser = chatUserRepo.findById(userToAdd).orElseThrow(() -> new UserNotFoundException(userToAdd));

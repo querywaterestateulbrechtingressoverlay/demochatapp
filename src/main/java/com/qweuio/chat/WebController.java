@@ -39,7 +39,6 @@ public class WebController {
   }
   @GetMapping("/mockinit")
   void init() {
-    logger.info("init");
     ChatUser user1 = new ChatUser("1", "user-1", List.of("1"));
     ChatUser user2 = new ChatUser("2", "user-2", List.of("1", "2"));
     ChatUser user3 = new ChatUser("3", "user-3", List.of("1", "2", "3"));
