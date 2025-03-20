@@ -1,12 +1,19 @@
 package com.qweuio.chat.core.exception;
 
-public class InsufficientPermissionsException extends RuntimeException {
-  private final String userId;
-  public InsufficientPermissionsException(String userId) {
-    this.userId = userId;
+public class InsufficientPermissionsException extends UserActionException {
+  private String chatroomId;
+  private String action;
+  public InsufficientPermissionsException(String userId, String chatroomId, String action) {
+    super(userId, "Insufficient permissions to perform action \"" + action + "\" in chatroom " + chatroomId);
+    this.chatroomId = chatroomId;
+    this.action = action;
   }
 
-  public String getUserId() {
-    return userId;
+  public String getChatroomId() {
+    return chatroomId;
+  }
+
+  public String getAction() {
+    return action;
   }
 }

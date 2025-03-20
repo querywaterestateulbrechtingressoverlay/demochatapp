@@ -1,11 +1,7 @@
 package com.qweuio.chat.core.exception;
 
-public class UserNotFoundException extends RuntimeException {
-  String userId;
-  public UserNotFoundException(String userId) {
-    this.userId = userId;
-  }
-  public String getUserId() {
-    return userId;
+public class UserNotFoundException extends UserActionException {
+  public UserNotFoundException(String causingUser, String queriedUserId) {
+    super(causingUser, "Queried user " + queriedUserId + " couldn't be found");
   }
 }

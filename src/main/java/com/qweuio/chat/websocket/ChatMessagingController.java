@@ -37,21 +37,9 @@ public class ChatMessagingController {
   @Autowired
   WebSocketChatMessagingService chatService;
 
-  @MessageExceptionHandler({UserNotFoundException.class})
-  void userNotFound() {
-
-  }
-  @MessageExceptionHandler({ChatroomAccessException.class})
-  void chatroomNotFound() {
-
-  }
-  @MessageExceptionHandler({InsufficientPermissionsException.class})
-  void insufficientPermissions() {
-    logger.info("hello");
-  }
-  @MessageExceptionHandler({TooManyUsersException.class, TooManyChatroomsException.class})
-  void tooManyUsersOrChatrooms() {
-
+  @MessageExceptionHandler({UserActionException.class})
+  void userActionException(UserActionException exception) {
+    logger.debug(exception.getMessage());
   }
   void updateUserListForSubscribers(String chatroomId) {
     kafkaService.updateUserList(new ChatUserListDTO(chatroomId,
@@ -77,7 +65,7 @@ public class ChatMessagingController {
   public void sendMessage(@Payload UnprocessedMessageDTO message,
                           @DestinationVariable String chatroomId,
                           Principal principal) {
-    if (chatService.getUserRole(principal.getName(), chatroomId) != WebSocketChatMessagingService.UserRole.NOT_A_MEMBER) {
+    if (chatService.verifyUserRole(principal.getName(), chatroomId, WebSocketChatMessagingService.UserRole.NOT_A_MEMBER)) {
       kafkaService.sendMessage(new ProcessedMessageDTO(principal.getName(), chatroomId, Instant.now(), message.message()));
     }
   }
