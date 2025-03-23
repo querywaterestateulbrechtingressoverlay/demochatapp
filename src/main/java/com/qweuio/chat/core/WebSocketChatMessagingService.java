@@ -66,31 +66,14 @@ public class WebSocketChatMessagingService implements ChatMessagingService<Strin
     if (chatroom.users().size() >= 100) {
       throw new TooManyUsersException(chatroomId);
     }
-    mongoTemplate.updateFirst(
-      new Query(Criteria.where("_id").is(userToAdd)),
-      new Update().addToSet("chatrooms", chatroomId),
-      "users");
-    mongoTemplate.updateFirst(
-      new Query(Criteria.where("_id").is(userToAdd)),
-      new Update().addToSet("users", new UserWithRoleEntity(userToAdd, "MEMBER")),
-      "chatrooms");
+    addUserToChatroom(chatroomId, userToAdd);
   }
   @Override
   public void removeUserFromChatroom(String removingUser, String userToRemove, String chatroomId) {
     if (!verifyUserRole(removingUser, chatroomId, UserRole.ADMIN) || verifyUserRole(userToRemove, chatroomId, UserRole.ADMIN)) {
       throw new InsufficientPermissionsException(removingUser, chatroomId, "remove user " + userToRemove);
     }
-
-    Optional<UserWithRoleEntity> kickTarget = chatroomRepo.getUserRoleFromChatroomById(chatroomId, userToRemove);
-
-    mongoTemplate.updateFirst(
-      new Query(Criteria.where("_id").is(kickTarget.get().userId())),
-      new Update().pull("chatrooms", chatroomId),
-      "users");
-    mongoTemplate.updateFirst(
-      new Query(Criteria.where("_id").is(chatroomId)),
-      new Update().pull("users", Query.query(Criteria.where("userId").is(kickTarget.get().userId()))),
-      "chatrooms");
+    removeUserFromChatroom(chatroomId, userToRemove);
   }
   @Override
   public String createChatroom(String creatorId, String chatroomName) {
@@ -98,7 +81,6 @@ public class WebSocketChatMessagingService implements ChatMessagingService<Strin
     if (creator.chatrooms().size() >= 100) {
       throw new TooManyChatroomsException(creatorId);
     }
-
     String newChatroomId = chatroomRepo.save(
       new Chatroom(
         null, chatroomName,
@@ -156,12 +138,30 @@ public class WebSocketChatMessagingService implements ChatMessagingService<Strin
 
   @Override
   public void addUserToChatroom(String chatroomId, String userId) {
-
+    mongoTemplate.updateFirst(
+      new Query(Criteria.where("_id").is(userId)),
+      new Update().addToSet("chatrooms", chatroomId),
+      "users");
+    mongoTemplate.updateFirst(
+      new Query(Criteria.where("_id").is(userId)),
+      new Update().addToSet("users", new UserWithRoleEntity(userId, "MEMBER")),
+      "chatrooms");
   }
 
   @Override
   public void removeUserFromChatroom(String chatroomId, String userId) {
+    UserWithRoleEntity kickTarget = chatroomRepo
+      .getUserRoleFromChatroomById(chatroomId, userId)
+      .orElseThrow(() -> new UserNotFoundException(chatroomId, userId));
 
+    mongoTemplate.updateFirst(
+      new Query(Criteria.where("_id").is(kickTarget.userId())),
+      new Update().pull("chatrooms", chatroomId),
+      "users");
+    mongoTemplate.updateFirst(
+      new Query(Criteria.where("_id").is(chatroomId)),
+      new Update().pull("users", Query.query(Criteria.where("userId").is(kickTarget.userId()))),
+      "chatrooms");
   }
 
   @Override

@@ -19,15 +19,10 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.web.csrf.CsrfToken;
-import org.springframework.security.web.csrf.CsrfTokenRepository;
-import org.springframework.security.web.csrf.DefaultCsrfToken;
-import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
-import java.security.Principal;
 import java.util.List;
 
 @Configuration
@@ -67,7 +62,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
             Authentication auth = c.convert(token);
             accessor.setUser(auth);
           }
-//          accessor.getSessionAttributes().put("org.springframework.security.web.csrf.CsrfToken", csrfTokenRepository.generateToken(null));
         }
         return message;
       }

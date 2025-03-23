@@ -4,21 +4,13 @@ import com.qweuio.chat.core.WebSocketChatMessagingService;
 import com.qweuio.chat.core.exception.*;
 import com.qweuio.chat.messaging.KafkaService;
 import com.qweuio.chat.persistence.MessagePersistingService;
-import com.qweuio.chat.persistence.entity.ChatUser;
-import com.qweuio.chat.persistence.entity.UserWithRoleEntity;
-import com.qweuio.chat.persistence.repository.ChatMessageRepository;
-import com.qweuio.chat.persistence.repository.ChatUserRepository;
 import com.qweuio.chat.websocket.dto.*;
-import com.qweuio.chat.persistence.repository.ChatroomRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.messaging.handler.annotation.*;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import java.security.Principal;
 import java.time.Instant;
@@ -37,8 +29,8 @@ public class ChatMessagingController {
   @Autowired
   WebSocketChatMessagingService chatService;
 
-  @MessageExceptionHandler({UserActionException.class})
-  void userActionException(UserActionException exception) {
+  @MessageExceptionHandler({ChatroomUserActionException.class})
+  void userActionException(ChatroomUserActionException exception) {
     logger.debug(exception.getMessage());
   }
   void updateUserListForSubscribers(String chatroomId) {
