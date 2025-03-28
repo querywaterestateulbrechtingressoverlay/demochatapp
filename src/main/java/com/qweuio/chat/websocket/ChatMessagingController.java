@@ -4,6 +4,7 @@ import com.qweuio.chat.core.WebSocketChatMessagingService;
 import com.qweuio.chat.core.exception.*;
 import com.qweuio.chat.messaging.KafkaService;
 import com.qweuio.chat.persistence.MessagePersistingService;
+import com.qweuio.chat.persistence.entity.ChatUser;
 import com.qweuio.chat.websocket.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,27 +26,32 @@ public class ChatMessagingController {
   @Autowired
   KafkaService kafkaService;
   @Autowired
-  SimpMessagingTemplate messagingTemplate;
-  @Autowired
   WebSocketChatMessagingService chatService;
+  @Autowired
+  MessageSenderService senderService;
+
+  void updateChatroomListForUser(String userId) {
+    senderService.updateChatroomList(
+      new ChatroomListDTO(
+        chatService.getUserChatrooms(userId)
+          .stream()
+          .map(Converters::toDTO)
+          .toList()),
+      userId);
+  }
+
+  void updateUserListForChatroom(String chatroomId) {
+    senderService.updateUserList(
+      new ChatUserListDTO(
+        chatroomId,
+        chatService.getChatroomUsers(chatroomId).stream().map(Converters::toDTO).toList()
+      )
+    );
+  }
 
   @MessageExceptionHandler({ChatroomUserActionException.class})
   void userActionException(ChatroomUserActionException exception) {
     logger.debug(exception.getMessage());
-  }
-  void updateUserListForSubscribers(String chatroomId) {
-    kafkaService.updateUserList(new ChatUserListDTO(chatroomId,
-      chatService.getChatroomUsers(chatroomId).stream()
-        .map(Converters::toDTO)
-        .toList()));
-  }
-
-  void updateChatroomListForSubscriber(String userId) {
-    messagingTemplate.convertAndSendToUser(userId, "/chatrooms",
-      new ChatroomListDTO(
-        chatService.getUserChatrooms(userId).stream()
-          .map((c) -> new ChatroomShortInfoDTO(c.id(), c.name()))
-          .toList()));
   }
 
   @MessageMapping("/getAvailableChatrooms")
@@ -61,6 +67,7 @@ public class ChatMessagingController {
       kafkaService.sendMessage(new ProcessedMessageDTO(principal.getName(), chatroomId, Instant.now(), message.message()));
     }
   }
+
   @MessageMapping("/{chatroomId}/getRecentHistory")
   public void getRecentHistory(@Payload MessageHistoryRequestDTO messageRequest,
                                @DestinationVariable String chatroomId,
@@ -68,36 +75,42 @@ public class ChatMessagingController {
     List<ProcessedMessageDTO> messages = chatService.getChatroomRecentHistory(principal.getName(), chatroomId);
     messagingTemplate.convertAndSendToUser(principal.getName(), "/chatrooms/messages", new ChatHistoryResponseDTO(chatroomId, messagePersistingService.getRecentMessages(chatroomId)));
   }
+
   @MessageMapping("/{chatroomId}/getUsers")
   public void getUsers(@DestinationVariable String chatroomId,
                        Principal principal) {
-    var asdf = chatService.getChatroomUsers(principal.getName(), chatroomId).stream()
-      .map((c) -> new UserShortInfoDTO(c.id(), c.name()))
-      .toList();
-    kafkaService.updateUserList(new ChatUserListDTO(chatroomId, asdf));
+    List<ChatUser> users = chatService.getChatroomUsers(principal.getName(), chatroomId);
+
   }
+
   @MessageMapping("/create")
   void createChat(@Payload ChatroomNameDTO chatCreationRequest, Principal principal) {
     chatService.createChatroom(principal.getName(), chatCreationRequest.chatroomName());
+    updateChatroomListForUser(principal.getName());
   }
+
   @MessageMapping("/{chatroomId}/delete")
   void deleteChat(@DestinationVariable String chatroomId, Principal principal) {
+    List<ChatUser> users = chatService.getChatroomUsers(chatroomId);
     chatService.deleteChatroom(principal.getName(), chatroomId);
+    users.forEach((cu) -> updateChatroomListForUser(cu.id()));
   }
+
   @MessageMapping("/{chatroomId}/invite")
   void inviteUserToChat(@Payload UserIdDTO userToInvite,
                         @DestinationVariable String chatroomId,
                         Principal principal) {
     chatService.addUserToChatroom(principal.getName(), userToInvite.userId(), chatroomId);
-    updateUserListForSubscribers(chatroomId);
-    updateChatroomListForSubscriber(userToInvite.userId());
+    updateUserListForChatroom(chatroomId);
+    updateChatroomListForUser(userToInvite.userId());
   }
+
   @MessageMapping("/{chatroomId}/kick")
   void kickUserFromChat(@Payload UserIdDTO userToKick,
                         @DestinationVariable String chatroomId,
                         Principal principal) {
     chatService.removeUserFromChatroom(principal.getName(), userToKick.userId(), chatroomId);
-    updateUserListForSubscribers(chatroomId);
-    updateChatroomListForSubscriber(userToKick.userId());
+    updateUserListForChatroom(chatroomId);
+    updateChatroomListForUser(userToKick.userId());
   }
 }

@@ -19,25 +19,23 @@ public class MessageSenderService {
   SimpMessagingTemplate template;
   @Autowired
   ChatroomRepository chatroomRepository;
-  @KafkaListener(id = "messageSender", topics = sendMsgTopic)
+
   public void sendMessage(ProcessedMessageDTO message) {
     logger.trace("sending message to chatroom {}", message.chatroomId());
     for (UserWithRoleEntity user : chatroomRepository.findById(message.chatroomId()).get().users()) {
       template.convertAndSendToUser(user.userId(), "/messages", message);
     }
   }
-  @KafkaListener(id = "userListUpdater", topics = userListTopic)
+
+  public void sendUpdateToUser(String userId, Object updateDTO) {
+    template.convertAndSendToUser(userId, "/system", updateDTO);
+  }
+
   public void updateUserList(ChatUserListDTO userList) {
     logger.debug("broadcasting an updated list of users to members of chatroom {}", userList.chatId());
     for (UserShortInfoDTO user : userList.users()) {
       logger.trace("sending an updated list of users of chatroom {} to user {}", userList.chatId(), user.id());
       template.convertAndSendToUser(user.id(), "/userlist", userList);
     }
-  }
-  public void updateChatroomList(ChatroomListDTO chatrooms, String userId) {
-
-  }
-  public void updateChatHistory(ChatHistoryResponseDTO chatHistory, String userId) {
-
   }
 }
