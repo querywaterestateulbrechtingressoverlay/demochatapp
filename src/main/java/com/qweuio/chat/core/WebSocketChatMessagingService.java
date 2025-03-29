@@ -8,6 +8,7 @@ import com.qweuio.chat.persistence.entity.UserWithRoleEntity;
 import com.qweuio.chat.persistence.repository.ChatMessageRepository;
 import com.qweuio.chat.persistence.repository.ChatUserRepository;
 import com.qweuio.chat.persistence.repository.ChatroomRepository;
+import com.qweuio.chat.websocket.dto.MessageRequestDTO;
 import com.qweuio.chat.websocket.dto.ProcessedMessageDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -109,6 +110,14 @@ public class WebSocketChatMessagingService implements ChatMessagingService<Strin
       throw new InsufficientPermissionsException(requestingUserId, chatroomId, "get user list");
     }
     return getChatroomUsers(chatroomId);
+  }
+
+  @Override
+  public void saveMessage(String senderId, String chatroomId, MessageRequestDTO message) {
+    if (verifyUserRole(senderId, chatroomId, UserRole.NOT_A_MEMBER)) {
+      throw new InsufficientPermissionsException(senderId, chatroomId, "send message");
+    }
+    msgPersistingService.persistMessage();
   }
 
   @Override

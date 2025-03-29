@@ -6,6 +6,7 @@ import com.qweuio.chat.messaging.KafkaService;
 import com.qweuio.chat.persistence.MessagePersistingService;
 import com.qweuio.chat.persistence.entity.ChatUser;
 import com.qweuio.chat.websocket.dto.*;
+import com.qweuio.chat.websocket.dto.inbound.MessageHistoryRequestDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,10 +60,12 @@ public class ChatMessagingController {
   }
 
   @MessageMapping("/{chatroomId}/send")
-  public void sendMessage(@Payload UnprocessedMessageDTO message,
+  public void sendMessage(@Payload MessageRequestDTO message,
                           @DestinationVariable String chatroomId,
                           Principal principal) {
-    if (chatService.verifyUserRole(principal.getName(), chatroomId, WebSocketChatMessagingService.UserRole.NOT_A_MEMBER)) {
+    chatService.saveMessage(principal.getName(), chatroomId, message);
+    senderService.sendMessage();
+    if (chatService.verifyUserRole(, WebSocketChatMessagingService.UserRole.NOT_A_MEMBER)) {
       kafkaService.sendMessage(new ProcessedMessageDTO(principal.getName(), chatroomId, Instant.now(), message.message()));
     }
   }

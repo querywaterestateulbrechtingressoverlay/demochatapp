@@ -23,7 +23,7 @@ public class MessageSenderService {
   @Autowired
   ChatroomRepository chatroomRepository;
 
-  public void sendMessage(ProcessedMessageDTO message) {
+  public void sendMessage(MessageRequestDTO message) {
     logger.trace("sending message to chatroom {}", message.chatroomId());
     for (UserWithRoleEntity user : chatroomRepository.findById(message.chatroomId()).get().users()) {
       template.convertAndSendToUser(user.userId(), "/messages", message);
