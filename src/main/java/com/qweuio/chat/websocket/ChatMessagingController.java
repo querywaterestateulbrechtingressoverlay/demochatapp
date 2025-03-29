@@ -10,7 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.messaging.handler.annotation.*;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
@@ -41,7 +40,7 @@ public class ChatMessagingController {
   }
 
   void updateUserListForChatroom(String chatroomId) {
-    senderService.updateUserList(
+    senderService.updateUserListForChatroom(
       new ChatUserListDTO(
         chatroomId,
         chatService.getChatroomUsers(chatroomId).stream().map(Converters::toDTO).toList()
@@ -56,7 +55,7 @@ public class ChatMessagingController {
 
   @MessageMapping("/getAvailableChatrooms")
   public void getChatrooms(@Headers Map<String, String> headers, Principal principal) {
-    updateChatroomListForSubscriber(principal.getName());
+    updateChatroomListForUser(principal.getName());
   }
 
   @MessageMapping("/{chatroomId}/send")
