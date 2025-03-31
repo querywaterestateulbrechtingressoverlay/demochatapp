@@ -5,6 +5,7 @@ import com.qweuio.chat.core.exception.*;
 import com.qweuio.chat.messaging.KafkaService;
 import com.qweuio.chat.persistence.MessagePersistingService;
 import com.qweuio.chat.persistence.entity.ChatUser;
+import com.qweuio.chat.persistence.entity.Chatroom;
 import com.qweuio.chat.websocket.dto.*;
 import com.qweuio.chat.websocket.dto.inbound.MessageHistoryRequestDTO;
 import org.slf4j.Logger;
@@ -30,25 +31,6 @@ public class ChatMessagingController {
   @Autowired
   MessageSenderService senderService;
 
-  void updateChatroomListForUser(String userId) {
-    senderService.updateChatroomList(
-      new ChatroomListDTO(
-        chatService.getUserChatrooms(userId)
-          .stream()
-          .map(Converters::toDTO)
-          .toList()),
-      userId);
-  }
-
-  void updateUserListForChatroom(String chatroomId) {
-    senderService.updateUserListForChatroom(
-      new ChatUserListDTO(
-        chatroomId,
-        chatService.getChatroomUsers(chatroomId).stream().map(Converters::toDTO).toList()
-      )
-    );
-  }
-
   @MessageExceptionHandler({ChatroomUserActionException.class})
   void userActionException(ChatroomUserActionException exception) {
     logger.debug(exception.getMessage());
@@ -56,7 +38,7 @@ public class ChatMessagingController {
 
   @MessageMapping("/getAvailableChatrooms")
   public void getChatrooms(@Headers Map<String, String> headers, Principal principal) {
-    updateChatroomListForUser(principal.getName());
+    senderService.addChatroomToUser(principal.getName(), Converters.toDTO(chatService.getUserChatrooms(principal.getName())));
   }
 
   @MessageMapping("/{chatroomId}/send")
@@ -103,7 +85,8 @@ public class ChatMessagingController {
                         @DestinationVariable String chatroomId,
                         Principal principal) {
     chatService.addUserToChatroom(principal.getName(), userToInvite.userId(), chatroomId);
-    updateUserListForChatroom(chatroomId);
+    senderService.addUserToChatroom(chatroomId, chatService.getChatroomUsers(chatroomId), chatService.getUser);
+    senderService.addChatroomToUser(userToInvite.userId(), List.of(new ChatroomShortInfoDTO()));
     updateChatroomListForUser(userToInvite.userId());
   }
 
@@ -112,7 +95,7 @@ public class ChatMessagingController {
                         @DestinationVariable String chatroomId,
                         Principal principal) {
     chatService.removeUserFromChatroom(principal.getName(), userToKick.userId(), chatroomId);
-    updateUserListForChatroom(chatroomId);
-    updateChatroomListForUser(userToKick.userId());
+    senderService.removeUserFromChatroom(chatroomId, userToKick.userId());
+    senderService.removeChatroomFromUser(userToKick.userId(), chatroomId);
   }
 }

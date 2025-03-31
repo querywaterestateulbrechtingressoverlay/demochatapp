@@ -4,6 +4,7 @@ import com.qweuio.chat.persistence.entity.ChatMessage;
 import com.qweuio.chat.persistence.entity.UserWithRoleEntity;
 import com.qweuio.chat.persistence.repository.ChatroomRepository;
 import com.qweuio.chat.websocket.dto.*;
+import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,11 +16,11 @@ import java.util.Map;
 
 @Service
 public class MessageSenderService {
-  private final String messageDestination = "/messages";
-  private final String messageHistoryDestination = "/messages/history";
-  private final String chatroomListUpdateDestination = "/chatrooms";
-  private final String chatroomUserListUpdateDestination = "/chatrooms/users";
-  private final String errorDestination = "/errors";
+  private final String messageDest = "/messages";
+  private final String messageHistoryDest = "/messages/history";
+  private final String chatroomListUpdateDest = "/chatrooms";
+  private final String chatroomUserListUpdDest = "/chatrooms/users";
+  private final String errorDest = "/errors";
 
   Logger logger = LoggerFactory.getLogger(MessageSenderService.class);
   @Autowired
@@ -27,30 +28,42 @@ public class MessageSenderService {
   @Autowired
   ChatroomRepository chatroomRepository;
 
-  public void sendMessage(MessageRequestDTO message) {
-    logger.trace("sending message to chatroom {}", message.chatroomId());
-    for (UserWithRoleEntity user : chatroomRepository.findById(message.chatroomId()).get().users()) {
-      template.convertAndSendToUser(user.userId(), "/messages", message);
+  public void sendMessage(MessageDTO message, List<String> recipients) {
+    logger.trace("sending message to chatroom {}", message.chatroom());
+    for (String recipientId : recipients) {
+      template.convertAndSendToUser(recipientId, messageDest, message);
     }
   }
 
   public void updateMessageHistory(String userId, String chatroomId, List<ChatMessage> history) {
-    template.convertAndSendToUser(userId, "/", new ChatHistoryResponseDTO(chatroomId, ));
+    template.convertAndSendToUser(userId, messageHistoryDest, new ChatHistoryResponseDTO(chatroomId, ));
   }
 
   public void addChatroomToUser(String userId, ChatroomListDTO list) {
-    template.convertAndSendToUser(userId, "/chatroom", list, Map.of("OPERATION", "ADD"));
+    template.convertAndSendToUser(userId, chatroomListUpdateDest, list, Map.of("OPERATION", "ADD"));
   }
 
   public void removeChatroomFromUser(String userId, String chatroomId) {
-    template.convertAndSendToUser(userId, "/chatroom", chatroomId, Map.of("OPERATION", "REMOVE"));
+    template.convertAndSendToUser(userId, chatroomListUpdateDest, chatroomId, Map.of("OPERATION", "REMOVE"));
   }
 
-  public void updateUserListForChatroom(ChatUserListDTO userList) {
-    logger.debug("broadcasting an updated list of users to members of chatroom {}", userList.chatId());
-    for (UserShortInfoDTO user : userList.users()) {
-      logger.trace("sending an updated list of users of chatroom {} to user {}", userList.chatId(), user.id());
-      template.convertAndSendToUser(user.id(), "/userlist", userList);
+  public void addUserToChatroom(String chatroomId, List<String> recipients, UserShortInfoDTO user) {
+    for (String recipientId : recipients) {
+      template.convertAndSendToUser(
+        recipientId,
+        chatroomUserListUpdDest,
+        user,
+        Map.of("OPERATION", "ADD")
+      );
     }
+  }
+
+  public void removeUserFromChatroom(String chatroomId, String userId) {
+    template.convertAndSendToUser(
+      userId,
+      "/chatroom",
+      new ChatUserListDTO(chatroomId, List.of(new UserShortInfoDTO(userId, null))),
+      Map.of("OPERATION", "REMOVE")
+    );
   }
 }

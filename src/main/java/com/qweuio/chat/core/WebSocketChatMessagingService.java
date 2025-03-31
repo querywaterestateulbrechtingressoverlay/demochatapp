@@ -55,6 +55,11 @@ public class WebSocketChatMessagingService implements ChatMessagingService<Strin
   }
 
   @Override
+  public ChatUser getUserInfo(String userId) {
+    return chatUserRepo.findById(userId).orElseThrow();
+  }
+
+  @Override
   public void addUserToChatroom(String addingUser, String userToAdd, String chatroomId) {
     if (!verifyUserRole(addingUser, chatroomId, UserRole.ADMIN)) {
       throw new InsufficientPermissionsException(addingUser, chatroomId, "add user " + userToAdd);
@@ -86,7 +91,9 @@ public class WebSocketChatMessagingService implements ChatMessagingService<Strin
       new Chatroom(
         null, chatroomName,
         List.of(new UserWithRoleEntity(creatorId, "ADMIN")),
-        Collections.emptyList())).id();
+        Collections.emptyList()
+      )
+    ).id();
     mongoTemplate.updateFirst(
       new Query(Criteria.where("_id").is(creatorId)),
       new Update().addToSet("chatrooms", newChatroomId),

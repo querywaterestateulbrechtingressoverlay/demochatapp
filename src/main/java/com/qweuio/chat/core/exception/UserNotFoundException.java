@@ -1,7 +1,7 @@
 package com.qweuio.chat.core.exception;
 
-public class UserNotFoundException extends ChatroomException {
-  public UserNotFoundException(String chatroomId, String queriedUserId) {
-    super(chatroomId, "User " + queriedUserId + " was not found");
+public class UserNotFoundException extends ChatAppException {
+  public UserNotFoundException(String queriedUserId) {
+    super("User " + queriedUserId + " was not found");
   }
 }
