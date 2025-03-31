@@ -15,9 +15,13 @@ import java.util.Map;
 
 @Service
 public class MessageSenderService {
+  private final String messageDestination = "/messages";
+  private final String messageHistoryDestination = "/messages/history";
+  private final String chatroomListUpdateDestination = "/chatrooms";
+  private final String chatroomUserListUpdateDestination = "/chatrooms/users";
+  private final String errorDestination = "/errors";
+
   Logger logger = LoggerFactory.getLogger(MessageSenderService.class);
-  final String sendMsgTopic = "${chatapp.kafka.message-topic}";
-  final String userListTopic = "${chatapp.kafka.user-list-topic}";
   @Autowired
   SimpMessagingTemplate template;
   @Autowired
