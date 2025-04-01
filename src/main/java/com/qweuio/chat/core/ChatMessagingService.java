@@ -11,6 +11,4 @@ public interface ChatMessagingService<T, U> extends ChatService<T, U> {
   void addUserToChatroom(T invitingUserId, U chatroomId, T inviteeId);
   void removeUserFromChatroom(T removingUserId, U chatroomId, T removeeId);
   List<ChatUser> getChatroomUsers(T requestingUserId, U chatroomId);
-
-  void saveMessage(String name, String chatroomId, MessageRequestDTO message);
 }

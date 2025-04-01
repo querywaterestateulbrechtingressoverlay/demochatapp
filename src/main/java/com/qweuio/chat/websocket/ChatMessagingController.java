@@ -1,11 +1,10 @@
 package com.qweuio.chat.websocket;
 
-import com.qweuio.chat.core.WebSocketChatMessagingService;
+import com.qweuio.chat.core.MongoChatMessagingService;
 import com.qweuio.chat.core.exception.*;
 import com.qweuio.chat.messaging.KafkaService;
 import com.qweuio.chat.persistence.MessagePersistingService;
 import com.qweuio.chat.persistence.entity.ChatUser;
-import com.qweuio.chat.persistence.entity.Chatroom;
 import com.qweuio.chat.websocket.dto.*;
 import com.qweuio.chat.websocket.dto.inbound.MessageHistoryRequestDTO;
 import org.slf4j.Logger;
@@ -27,12 +26,12 @@ public class ChatMessagingController {
   @Autowired
   KafkaService kafkaService;
   @Autowired
-  WebSocketChatMessagingService chatService;
+  MongoChatMessagingService chatService;
   @Autowired
   MessageSenderService senderService;
 
-  @MessageExceptionHandler({ChatroomUserActionException.class})
-  void userActionException(ChatroomUserActionException exception) {
+  @MessageExceptionHandler({UserActionException.class})
+  void userActionException(UserActionException exception) {
     logger.debug(exception.getMessage());
   }
 
@@ -45,9 +44,9 @@ public class ChatMessagingController {
   public void sendMessage(@Payload MessageRequestDTO message,
                           @DestinationVariable String chatroomId,
                           Principal principal) {
-    chatService.saveMessage(principal.getName(), chatroomId, message);
+    messagePersistingService.persistMessage();
     senderService.sendMessage();
-    if (chatService.verifyUserRole(, WebSocketChatMessagingService.UserRole.NOT_A_MEMBER)) {
+    if (chatService.verifyUserRole(, MongoChatMessagingService.UserRole.NOT_A_MEMBER)) {
       kafkaService.sendMessage(new ProcessedMessageDTO(principal.getName(), chatroomId, Instant.now(), message.message()));
     }
   }

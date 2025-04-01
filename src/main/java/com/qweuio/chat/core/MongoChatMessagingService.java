@@ -1,11 +1,11 @@
 package com.qweuio.chat.core;
 
 import com.qweuio.chat.core.exception.*;
+import com.qweuio.chat.core.exception.chatapp.*;
 import com.qweuio.chat.persistence.MessagePersistingService;
 import com.qweuio.chat.persistence.entity.ChatUser;
 import com.qweuio.chat.persistence.entity.Chatroom;
 import com.qweuio.chat.persistence.entity.UserWithRoleEntity;
-import com.qweuio.chat.persistence.repository.ChatMessageRepository;
 import com.qweuio.chat.persistence.repository.ChatUserRepository;
 import com.qweuio.chat.persistence.repository.ChatroomRepository;
 import com.qweuio.chat.websocket.dto.MessageRequestDTO;
@@ -19,10 +19,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 @Service
-public class WebSocketChatMessagingService implements ChatMessagingService<String, String> {
+public class MongoChatMessagingService implements ChatMessagingService<String, String> {
   public enum UserRole {
     NOT_A_MEMBER, MEMBER, ADMIN
   }
@@ -32,8 +31,6 @@ public class WebSocketChatMessagingService implements ChatMessagingService<Strin
   private ChatroomRepository chatroomRepo;
   @Autowired
   private ChatUserRepository chatUserRepo;
-  @Autowired
-  private ChatMessageRepository chatMsgRepo;
   @Autowired
   private MongoTemplate mongoTemplate;
 
@@ -48,8 +45,12 @@ public class WebSocketChatMessagingService implements ChatMessagingService<Strin
     return chatUserRepo.getChatroomsByUser(userId);
   }
   public List<ProcessedMessageDTO> getChatroomRecentHistory(String requestingUserId, String chatroomId) {
-    if (verifyUserRole(requestingUserId, chatroomId, UserRole.NOT_A_MEMBER)) {
-      throw new InsufficientPermissionsException(requestingUserId, chatroomId, "get recent history");
+    try {
+      if (verifyUserRole(requestingUserId, chatroomId, UserRole.NOT_A_MEMBER)) {
+        throw new InsufficientPermissionsException("get recent history in chatroom " + chatroomId);
+      }
+    } catch (ChatAppException e) {
+      throw new UserActionException(requestingUserId, e.getMessage(), e);
     }
     return msgPersistingService.getRecentMessages(chatroomId);
   }
@@ -61,70 +62,82 @@ public class WebSocketChatMessagingService implements ChatMessagingService<Strin
 
   @Override
   public void addUserToChatroom(String addingUser, String userToAdd, String chatroomId) {
-    if (!verifyUserRole(addingUser, chatroomId, UserRole.ADMIN)) {
-      throw new InsufficientPermissionsException(addingUser, chatroomId, "add user " + userToAdd);
+    try {
+      if (!verifyUserRole(addingUser, chatroomId, UserRole.ADMIN)) {
+        throw new InsufficientPermissionsException("add user " + userToAdd + " to chatroom " + chatroomId);
+      }
+      ChatUser chatUser = chatUserRepo.findById(userToAdd).orElseThrow(() -> new UserNotFoundException(userToAdd));
+      if (chatUser.chatrooms().size() >= 100) {
+        throw new TooManyChatroomsException(userToAdd, chatroomId);
+      }
+      Chatroom chatroom = chatroomRepo.findById(chatroomId).orElseThrow(() -> new ChatroomNotFoundException(chatroomId));
+      if (chatroom.users().size() >= 100) {
+        throw new TooManyUsersException(userToAdd, chatroomId);
+      }
+      addUserToChatroom(chatroomId, userToAdd);
+    } catch (ChatAppException e) {
+      throw new UserActionException(addingUser, e.getMessage(), e);
     }
-    ChatUser chatUser = chatUserRepo.findById(userToAdd).orElseThrow(() -> new UserNotFoundException(addingUser, userToAdd));
-    if (chatUser.chatrooms().size() >= 100) {
-      throw new TooManyChatroomsException(userToAdd);
-    }
-    Chatroom chatroom = chatroomRepo.findById(chatroomId).orElseThrow(() -> new ChatroomNotFoundException(chatroomId));
-    if (chatroom.users().size() >= 100) {
-      throw new TooManyUsersException(chatroomId);
-    }
-    addUserToChatroom(chatroomId, userToAdd);
   }
   @Override
   public void removeUserFromChatroom(String removingUser, String userToRemove, String chatroomId) {
-    if (!verifyUserRole(removingUser, chatroomId, UserRole.ADMIN) || verifyUserRole(userToRemove, chatroomId, UserRole.ADMIN)) {
-      throw new InsufficientPermissionsException(removingUser, chatroomId, "remove user " + userToRemove);
+    try {
+      if (!verifyUserRole(removingUser, chatroomId, UserRole.ADMIN) || verifyUserRole(userToRemove, chatroomId, UserRole.ADMIN)) {
+        throw new InsufficientPermissionsException("remove user " + userToRemove + " from chatroom " + chatroomId);
+      }
+      removeUserFromChatroom(chatroomId, userToRemove);
+    } catch (ChatAppException e) {
+      throw new UserActionException(removingUser, e.getMessage(), e);
     }
-    removeUserFromChatroom(chatroomId, userToRemove);
   }
   @Override
   public String createChatroom(String creatorId, String chatroomName) {
-    ChatUser creator = chatUserRepo.findById(creatorId).orElseThrow(() -> new RuntimeException("a ghost is trying to create a new chatroom"));
-    if (creator.chatrooms().size() >= 100) {
-      throw new TooManyChatroomsException(creatorId);
+    try {
+      ChatUser creator = chatUserRepo.findById(creatorId).orElseThrow(() -> new RuntimeException("a ghost is trying to create a new chatroom"));
+      if (creator.chatrooms().size() >= 100) {
+        throw new TooManyChatroomsException(creatorId, null);
+      }
+      String newChatroomId = chatroomRepo.save(
+        new Chatroom(
+          null, chatroomName,
+          List.of(new UserWithRoleEntity(creatorId, "ADMIN")),
+          Collections.emptyList()
+        )
+      ).id();
+      mongoTemplate.updateFirst(
+        new Query(Criteria.where("_id").is(creatorId)),
+        new Update().addToSet("chatrooms", newChatroomId),
+        "users");
+      return newChatroomId;
+    } catch (ChatAppException e) {
+      throw new UserActionException(creatorId, e.getMessage(), e);
     }
-    String newChatroomId = chatroomRepo.save(
-      new Chatroom(
-        null, chatroomName,
-        List.of(new UserWithRoleEntity(creatorId, "ADMIN")),
-        Collections.emptyList()
-      )
-    ).id();
-    mongoTemplate.updateFirst(
-      new Query(Criteria.where("_id").is(creatorId)),
-      new Update().addToSet("chatrooms", newChatroomId),
-      "users");
-    return newChatroomId;
   }
   @Override
   public void deleteChatroom(String deletingUserId, String chatroomId) {
-    if (!chatroomRepo.existsById(chatroomId)) {
-      throw new ChatroomAccessException(deletingUserId, chatroomId);
+    try {
+      if (!chatroomRepo.existsById(chatroomId)) {
+        throw new ChatroomNotFoundException(chatroomId);
+      }
+      if (!verifyUserRole(deletingUserId, chatroomId, UserRole.ADMIN)) {
+        throw new InsufficientPermissionsException("delete chatroom " + chatroomId);
+      }
+      deleteChatroom(chatroomId);
+    } catch (ChatAppException e) {
+      throw new UserActionException(deletingUserId, e.getMessage(), e);
     }
-    if (!verifyUserRole(deletingUserId, chatroomId, UserRole.ADMIN)) {
-      throw new InsufficientPermissionsException(deletingUserId, chatroomId, "delete chatroom");
-    }
-    deleteChatroom(chatroomId);
   }
 
   @Override
   public List<ChatUser> getChatroomUsers(String requestingUserId, String chatroomId) {
-    if (verifyUserRole(requestingUserId, chatroomId, UserRole.NOT_A_MEMBER)) {
-      throw new InsufficientPermissionsException(requestingUserId, chatroomId, "get user list");
+    try {
+      if (verifyUserRole(requestingUserId, chatroomId, UserRole.NOT_A_MEMBER)) {
+        throw new InsufficientPermissionsException("get user list of chatroom " + chatroomId);
+      }
+      return getChatroomUsers(chatroomId);
+    } catch (ChatAppException e) {
+      throw new UserActionException(requestingUserId, e.getMessage(), e);
     }
-    return getChatroomUsers(chatroomId);
-  }
-
-  @Override
-  public void saveMessage(String senderId, String chatroomId, MessageRequestDTO message) {
-    if (verifyUserRole(senderId, chatroomId, UserRole.NOT_A_MEMBER)) {
-      throw new InsufficientPermissionsException(senderId, chatroomId, "send message");
-    }
-    msgPersistingService.persistMessage();
   }
 
   @Override
@@ -168,7 +181,7 @@ public class WebSocketChatMessagingService implements ChatMessagingService<Strin
   public void removeUserFromChatroom(String chatroomId, String userId) {
     UserWithRoleEntity kickTarget = chatroomRepo
       .getUserRoleFromChatroomById(chatroomId, userId)
-      .orElseThrow(() -> new UserNotFoundException(chatroomId, userId));
+      .orElseThrow(() -> new UserNotFoundException(userId));
 
     mongoTemplate.updateFirst(
       new Query(Criteria.where("_id").is(kickTarget.userId())),
