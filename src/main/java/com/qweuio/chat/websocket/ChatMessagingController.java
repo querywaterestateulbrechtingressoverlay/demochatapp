@@ -86,7 +86,6 @@ public class ChatMessagingController {
     chatService.addUserToChatroom(principal.getName(), userToInvite.userId(), chatroomId);
     senderService.addUserToChatroom(chatroomId, chatService.getChatroomUsers(chatroomId), chatService.getUser);
     senderService.addChatroomToUser(userToInvite.userId(), List.of(new ChatroomShortInfoDTO()));
-    updateChatroomListForUser(userToInvite.userId());
   }
 
   @MessageMapping("/{chatroomId}/kick")

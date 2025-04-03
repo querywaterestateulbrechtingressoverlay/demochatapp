@@ -31,4 +31,9 @@ public interface ChatroomRepository extends MongoRepository<Chatroom, String> {
     "{ $replaceRoot: { newRoot: '$users' } }"
   })
   List<ChatUser> getUsersByChatroom(String chatroomId);
+  @Aggregation({
+    "{ $match: { '_id': ?0 } }",
+    "$project: { count: { $size: $users } _id: 0 }"
+  })
+  Optional<Integer> getUserCount(String chatroomId);
 }

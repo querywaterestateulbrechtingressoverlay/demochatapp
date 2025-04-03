@@ -61,20 +61,20 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
   }
 
   @Override
-  public void addUserToChatroom(String addingUser, String userToAdd, String chatroomId) {
+  public Chatroom addUserToChatroom(String addingUser, String userToAdd, String chatroomId) {
     try {
       if (!verifyUserRole(addingUser, chatroomId, UserRole.ADMIN)) {
         throw new InsufficientPermissionsException("add user " + userToAdd + " to chatroom " + chatroomId);
       }
-      ChatUser chatUser = chatUserRepo.findById(userToAdd).orElseThrow(() -> new UserNotFoundException(userToAdd));
-      if (chatUser.chatrooms().size() >= 100) {
+      if (chatUserRepo.getChatroomCount(userToAdd).orElseThrow(() -> new UserNotFoundException(userToAdd)) >= 100) {
         throw new TooManyChatroomsException(userToAdd, chatroomId);
       }
-      Chatroom chatroom = chatroomRepo.findById(chatroomId).orElseThrow(() -> new ChatroomNotFoundException(chatroomId));
-      if (chatroom.users().size() >= 100) {
+
+      if (chatroomRepo.getUserCount(chatroomId).orElseThrow(() -> new ChatroomNotFoundException(chatroomId)) >= 100) {
         throw new TooManyUsersException(userToAdd, chatroomId);
       }
       addUserToChatroom(chatroomId, userToAdd);
+      return
     } catch (ChatAppException e) {
       throw new UserActionException(addingUser, e.getMessage(), e);
     }
@@ -166,7 +166,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
   }
 
   @Override
-  public void addUserToChatroom(String chatroomId, String userId) {
+  public Chatroom addUserToChatroom(String chatroomId, String userId) {
     mongoTemplate.updateFirst(
       new Query(Criteria.where("_id").is(userId)),
       new Update().addToSet("chatrooms", chatroomId),

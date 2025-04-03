@@ -1,4 +1,4 @@
-package com.qweuio.chat.websocket.dto;
+package com.qweuio.cchatroomId, hat.websocket.dto;
 
 import com.qweuio.chat.persistence.entity.ChatMessage;
 import com.qweuio.chat.persistence.entity.ChatUser;
