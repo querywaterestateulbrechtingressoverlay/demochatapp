@@ -33,7 +33,7 @@ public class MessagePersistingService {
   @Autowired
   ChatMessageRepository messageRepository;
   @Autowired
-  RedisTemplate<String, ProcessedMessageDTO> chatMessageCacheTemplate;
+  RedisTemplate<String, ChatMessage> chatMessageCacheTemplate;
 
   @Autowired
   RedisTemplate<String, String> chatKeyIndexTemplate;
@@ -50,7 +50,7 @@ public class MessagePersistingService {
       });
     }
   }
-  public void cacheMessage(ProcessedMessageDTO message) {
+  public void cacheMessage(ChatMessage message) {
     if (chatMessageCacheTemplate.opsForList().leftPush(CHATROOM_PREFIX + message.chatroomId(), message) == 1) {
       chatKeyIndexTemplate.opsForSet().add(CACHED_CHATROOMS, message.chatroomId());
     }
@@ -64,18 +64,17 @@ public class MessagePersistingService {
     messageRepository.save(new ChatMessage(null, message.senderId(), message.chatroomId(), message.sentAt(), message.message()));
   }
 
-  public List<ProcessedMessageDTO> getRecentMessages(String chatroomId) {
+  public List<ChatMessage> getRecentMessages(String chatroomId) {
     if (chatKeyIndexTemplate.opsForSet().isMember(CACHED_CHATROOMS, chatroomId)) {
-      List<ProcessedMessageDTO> cachedMessages = chatMessageCacheTemplate.opsForList().range(CHATROOM_PREFIX + chatroomId, 0, RECENT_MESSAGE_COUNT);
+      List<ChatMessage> cachedMessages = chatMessageCacheTemplate.opsForList().range(CHATROOM_PREFIX + chatroomId, 0, RECENT_MESSAGE_COUNT);
       if (!cachedMessages.isEmpty()) {
         return cachedMessages;
       } else {
         chatKeyIndexTemplate.opsForSet().remove(CACHED_CHATROOMS, CHATROOM_PREFIX + chatroomId);
       }
     }
-    List<ProcessedMessageDTO> persistedMessages = messageRepository.findTop10ByChatroomId(chatroomId)
+    List<ChatMessage> persistedMessages = messageRepository.findTop10ByChatroomId(chatroomId)
       .stream()
-      .map(Converters::toDTO)
       .toList();
     persistedMessages.forEach(this::cacheMessage);
     return persistedMessages;

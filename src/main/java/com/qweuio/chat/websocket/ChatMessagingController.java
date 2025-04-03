@@ -56,6 +56,7 @@ public class ChatMessagingController {
                                @DestinationVariable String chatroomId,
                                Principal principal) {
     List<ProcessedMessageDTO> messages = chatService.getChatroomRecentHistory(principal.getName(), chatroomId);
+    senderService.updateMessageHistory(principal.getName(), chatroomId,
     messagingTemplate.convertAndSendToUser(principal.getName(), "/chatrooms/messages", new ChatHistoryResponseDTO(chatroomId, messagePersistingService.getRecentMessages(chatroomId)));
   }
 
@@ -63,7 +64,6 @@ public class ChatMessagingController {
   public void getUsers(@DestinationVariable String chatroomId,
                        Principal principal) {
     List<ChatUser> users = chatService.getChatroomUsers(principal.getName(), chatroomId);
-
   }
 
   @MessageMapping("/create")
