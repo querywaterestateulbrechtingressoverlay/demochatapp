@@ -2,8 +2,7 @@ package com.qweuio.chat.persistence;
 
 import com.qweuio.chat.persistence.entity.ChatMessage;
 import com.qweuio.chat.persistence.repository.ChatMessageRepository;
-import com.qweuio.chat.websocket.dto.Converters;
-import com.qweuio.chat.websocket.dto.ProcessedMessageDTO;
+import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,10 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
-import java.util.UUID;
 
 @EnableScheduling
 @Service
@@ -50,6 +46,7 @@ public class MessagePersistingService {
       });
     }
   }
+
   public void cacheMessage(ChatMessage message) {
     if (chatMessageCacheTemplate.opsForList().leftPush(CHATROOM_PREFIX + message.chatroomId(), message) == 1) {
       chatKeyIndexTemplate.opsForSet().add(CACHED_CHATROOMS, message.chatroomId());
@@ -58,25 +55,32 @@ public class MessagePersistingService {
   }
 
   @KafkaListener(id = "messagePersister", topics = sendMsgTopic)
-  public void persistMessage(ProcessedMessageDTO message) {
-    logger.info("persisting message sent from {} to chatroom {} at {}", message.senderId(), message.chatroomId(), Instant.now());
-    cacheMessage(message);
-    messageRepository.save(new ChatMessage(null, message.senderId(), message.chatroomId(), message.sentAt(), message.message()));
+  public ChatMessage persistMessage(MessageDTO message) {
+    ChatMessage messageEntity = messageRepository.save(new ChatMessage(null, message.sender(), message.chatroom(), message.timestamp(), message.content()));
+    cacheMessage(messageEntity);
+    return messageEntity;
   }
 
-  public List<ChatMessage> getRecentMessages(String chatroomId) {
+  public boolean isCachePresent(String chatroomId) {
     if (chatKeyIndexTemplate.opsForSet().isMember(CACHED_CHATROOMS, chatroomId)) {
-      List<ChatMessage> cachedMessages = chatMessageCacheTemplate.opsForList().range(CHATROOM_PREFIX + chatroomId, 0, RECENT_MESSAGE_COUNT);
-      if (!cachedMessages.isEmpty()) {
-        return cachedMessages;
+      if (chatMessageCacheTemplate.opsForList().size(CHATROOM_PREFIX + chatroomId) > 0) {
+        return true;
       } else {
         chatKeyIndexTemplate.opsForSet().remove(CACHED_CHATROOMS, CHATROOM_PREFIX + chatroomId);
       }
     }
-    List<ChatMessage> persistedMessages = messageRepository.findTop10ByChatroomId(chatroomId)
-      .stream()
-      .toList();
-    persistedMessages.forEach(this::cacheMessage);
-    return persistedMessages;
+    return false;
+  }
+
+  public List<ChatMessage> getRecentMessages(String chatroomId) {
+    if (isCachePresent(chatroomId)) {
+      return chatMessageCacheTemplate.opsForList().range(CHATROOM_PREFIX + chatroomId, 0, RECENT_MESSAGE_COUNT);
+    } else {
+      List<ChatMessage> persistedMessages = messageRepository.findTop10ByChatroomId(chatroomId)
+        .stream()
+        .toList();
+      persistedMessages.forEach(this::cacheMessage);
+      return persistedMessages;
+    }
   }
 }

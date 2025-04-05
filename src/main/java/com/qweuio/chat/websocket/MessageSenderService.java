@@ -1,10 +1,7 @@
 package com.qweuio.chat.websocket;
 
 import com.qweuio.chat.persistence.entity.ChatMessage;
-import com.qweuio.chat.persistence.entity.UserWithRoleEntity;
-import com.qweuio.chat.persistence.repository.ChatroomRepository;
 import com.qweuio.chat.websocket.dto.*;
-import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,26 +22,24 @@ public class MessageSenderService {
   Logger logger = LoggerFactory.getLogger(MessageSenderService.class);
   @Autowired
   SimpMessagingTemplate template;
-  @Autowired
-  ChatroomRepository chatroomRepository;
 
-  public void sendMessage(MessageDTO message, List<String> recipients) {
-    logger.trace("sending message to chatroom {}", message.chatroom());
+  public void sendMessage(ChatMessage message, List<String> recipients) {
+    logger.trace("sending message to chatroom {}", message.chatroomId());
     for (String recipientId : recipients) {
       template.convertAndSendToUser(recipientId, messageDest, message);
     }
   }
 
   public void updateMessageHistory(String userId, String chatroomId, List<ChatMessage> history) {
-    template.convertAndSendToUser(userId, messageHistoryDest, new ChatHistoryResponseDTO(chatroomId, ));
+    template.convertAndSendToUser(userId, messageHistoryDest, new ChatHistoryResponseDTO(chatroomId, history.stream().map(Converters::toDTO).toList()));
   }
 
   public void addChatroomToUser(String userId, ChatroomListDTO list) {
-    template.convertAndSendToUser(userId, chatroomListUpdateDest, list, Map.of("OPERATION", "ADD"));
+    template.convertAndSendToUser(userId, chatroomListUpdateDest, list, Map.of("operation", "add"));
   }
 
   public void removeChatroomFromUser(String userId, String chatroomId) {
-    template.convertAndSendToUser(userId, chatroomListUpdateDest, chatroomId, Map.of("OPERATION", "REMOVE"));
+    template.convertAndSendToUser(userId, chatroomListUpdateDest, chatroomId, Map.of("operation", "remove"));
   }
 
   public void addUserToChatroom(String chatroomId, List<String> recipients, UserShortInfoDTO user) {
@@ -53,7 +48,7 @@ public class MessageSenderService {
         recipientId,
         chatroomUserListUpdDest,
         user,
-        Map.of("OPERATION", "ADD")
+        Map.of("operation", "add")
       );
     }
   }
@@ -63,7 +58,7 @@ public class MessageSenderService {
       userId,
       "/chatroom",
       new ChatUserListDTO(chatroomId, List.of(new UserShortInfoDTO(userId, null))),
-      Map.of("OPERATION", "REMOVE")
+      Map.of("operation", "remove")
     );
   }
 }

@@ -69,14 +69,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         }
         return message;
       }
-      @Override
-      public void afterMessageHandled(Message<?> message, MessageChannel channel, MessageHandler handler, Exception ex) {
-        StompHeaderAccessor acc = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
-        assert acc != null;
-        if (acc.getNativeHeader("receipt") != null) {
-          Stomp
-        }
-      }
     });
   }
 }

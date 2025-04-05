@@ -25,7 +25,7 @@ stompClient.onConnect = (frame) => {
     receiveChatroomListUpdate(JSON.parse(chatroomList.body).chatrooms);
   });
   stompClient.subscribe("/user/" + userId + "/chatrooms/messages", (chatroomHistory) => {
-    receieveChatHistoryUpdate(JSON.parse(chatroomHistory.body).chatId, JSON.parse(chatroomHistory.body).messageList);
+    receiveChatHistoryUpdate(JSON.parse(chatroomHistory.body).chatId, JSON.parse(chatroomHistory.body).messageList);
   });
   requestChatroomListUpdate();
 };
@@ -122,7 +122,7 @@ function receiveNewMessage(message) {
     senderId: message.senderId
   });
   if (message.chatroomId == currentChatroom) {
-    $("#message-list").append("<tr><td>" + message.senderId + " at " + message.sentAt + ":" + message.message + "</td></tr>");
+    $("#message-list").append("<tr><td>" + message.senderId + " at " + message.sentAt + ":" + message.content + "</td></tr>");
   }
 }
 
@@ -147,7 +147,7 @@ function receieveChatHistoryUpdate(chatroomId, messageList) {
   cachedMessages.get(chatroomId).push(...messageList);
   if (chatroomId == currentChatroom) {
     messageList.forEach((message) => {
-      $("#message-list").append("<tr><td>" + message.senderId + " at " + message.sentAt + ":" + message.message + "</td></tr>");
+      $("#message-list").append("<tr><td>" + message.senderId + " at " + message.sentAt + ":" + message.content + "</td></tr>");
     });
   }
 }

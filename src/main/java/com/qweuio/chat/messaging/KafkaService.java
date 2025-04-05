@@ -1,8 +1,7 @@
 package com.qweuio.chat.messaging;
 
-import com.qweuio.chat.persistence.entity.ChatUser;
 import com.qweuio.chat.websocket.dto.ChatUserListDTO;
-import com.qweuio.chat.websocket.dto.ProcessedMessageDTO;
+import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -16,7 +15,7 @@ public class KafkaService {
   String userListTopic;
   @Autowired
   KafkaTemplate<String, Object> kafkaMessageTemplate;
-  public void sendMessage(ProcessedMessageDTO message) {
+  public void sendMessage(MessageDTO message) {
     kafkaMessageTemplate.send(sendMsgTopic, message);
   }
 

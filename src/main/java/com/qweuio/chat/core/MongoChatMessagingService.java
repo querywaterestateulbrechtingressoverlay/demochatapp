@@ -3,13 +3,14 @@ package com.qweuio.chat.core;
 import com.qweuio.chat.core.exception.*;
 import com.qweuio.chat.core.exception.chatapp.*;
 import com.qweuio.chat.persistence.MessagePersistingService;
+import com.qweuio.chat.persistence.entity.ChatMessage;
 import com.qweuio.chat.persistence.entity.ChatUser;
 import com.qweuio.chat.persistence.entity.Chatroom;
 import com.qweuio.chat.persistence.entity.UserWithRoleEntity;
 import com.qweuio.chat.persistence.repository.ChatUserRepository;
 import com.qweuio.chat.persistence.repository.ChatroomRepository;
 import com.qweuio.chat.websocket.dto.MessageRequestDTO;
-import com.qweuio.chat.websocket.dto.ProcessedMessageDTO;
+import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -17,8 +18,10 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class MongoChatMessagingService implements ChatMessagingService<String, String> {
@@ -41,10 +44,12 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
       .orElse(UserRole.NOT_A_MEMBER)
       .equals(role);
   }
+
   public List<Chatroom> getUserChatrooms(String userId) {
     return chatUserRepo.getChatroomsByUser(userId);
   }
-  public List<ProcessedMessageDTO> getChatroomRecentHistory(String requestingUserId, String chatroomId) {
+
+  public List<ChatMessage> getChatroomRecentHistory(String requestingUserId, String chatroomId) {
     try {
       if (verifyUserRole(requestingUserId, chatroomId, UserRole.NOT_A_MEMBER)) {
         throw new InsufficientPermissionsException("get recent history in chatroom " + chatroomId);
@@ -61,6 +66,21 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
   }
 
   @Override
+  public ChatMessage sendMessage(String senderId, String chatroomId, MessageRequestDTO message) {
+    try {
+      if (!chatroomRepo.existsById(chatroomId)) {
+        throw new ChatroomNotFoundException(chatroomId);
+      }
+      if (verifyUserRole(senderId, chatroomId, UserRole.NOT_A_MEMBER)) {
+        throw new InsufficientPermissionsException("send message to chatroom " + chatroomId);
+      }
+      return msgPersistingService.persistMessage(new MessageDTO(null, senderId, chatroomId, Instant.now(), message.message()));
+    } catch (ChatAppException e) {
+      throw new UserActionException(senderId, e.getMessage(), e);
+    }
+  }
+
+  @Override
   public Chatroom addUserToChatroom(String addingUser, String userToAdd, String chatroomId) {
     try {
       if (!verifyUserRole(addingUser, chatroomId, UserRole.ADMIN)) {
@@ -69,12 +89,13 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
       if (chatUserRepo.getChatroomCount(userToAdd).orElseThrow(() -> new UserNotFoundException(userToAdd)) >= 100) {
         throw new TooManyChatroomsException(userToAdd, chatroomId);
       }
-
       if (chatroomRepo.getUserCount(chatroomId).orElseThrow(() -> new ChatroomNotFoundException(chatroomId)) >= 100) {
         throw new TooManyUsersException(userToAdd, chatroomId);
       }
       addUserToChatroom(chatroomId, userToAdd);
-      return
+      Optional<Chatroom> chatroom = chatroomRepo.findById(chatroomId);
+      assert chatroom.isPresent();
+      return chatroom.get();
     } catch (ChatAppException e) {
       throw new UserActionException(addingUser, e.getMessage(), e);
     }
@@ -91,24 +112,24 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
     }
   }
   @Override
-  public String createChatroom(String creatorId, String chatroomName) {
+  public Chatroom createChatroom(String creatorId, String chatroomName) {
     try {
       ChatUser creator = chatUserRepo.findById(creatorId).orElseThrow(() -> new RuntimeException("a ghost is trying to create a new chatroom"));
       if (creator.chatrooms().size() >= 100) {
         throw new TooManyChatroomsException(creatorId, null);
       }
-      String newChatroomId = chatroomRepo.save(
+      Chatroom newChatroom = chatroomRepo.save(
         new Chatroom(
           null, chatroomName,
           List.of(new UserWithRoleEntity(creatorId, "ADMIN")),
           Collections.emptyList()
         )
-      ).id();
+      );
       mongoTemplate.updateFirst(
         new Query(Criteria.where("_id").is(creatorId)),
-        new Update().addToSet("chatrooms", newChatroomId),
+        new Update().addToSet("chatrooms", newChatroom.id()),
         "users");
-      return newChatroomId;
+      return newChatroom;
     } catch (ChatAppException e) {
       throw new UserActionException(creatorId, e.getMessage(), e);
     }
@@ -166,7 +187,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
   }
 
   @Override
-  public Chatroom addUserToChatroom(String chatroomId, String userId) {
+  public void addUserToChatroom(String chatroomId, String userId) {
     mongoTemplate.updateFirst(
       new Query(Criteria.where("_id").is(userId)),
       new Update().addToSet("chatrooms", chatroomId),

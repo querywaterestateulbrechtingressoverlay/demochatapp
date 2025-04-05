@@ -9,7 +9,7 @@ public interface ChatService<T, U> {
   ChatUser getUserInfo(T userId);
   U createChatroom(String chatroomName);
   void deleteChatroom(U chatroomId);
-  Chatroom addUserToChatroom(U chatroomId, T userId);
+  void addUserToChatroom(U chatroomId, T userId);
   void removeUserFromChatroom(U chatroomId, T userId);
   List<ChatUser> getChatroomUsers(U chatroomId);
 }

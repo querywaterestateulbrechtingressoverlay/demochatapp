@@ -1,8 +1,9 @@
-package com.qweuio.cchatroomId, hat.websocket.dto;
+package com.qweuio.chat.websocket.dto;
 
 import com.qweuio.chat.persistence.entity.ChatMessage;
 import com.qweuio.chat.persistence.entity.ChatUser;
 import com.qweuio.chat.persistence.entity.Chatroom;
+import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 
 import java.util.List;
 
@@ -15,8 +16,8 @@ public class Converters {
     return new ChatroomShortInfoDTO(chatroom.id(), chatroom.name());
   }
 
-  public static ProcessedMessageDTO toDTO(ChatMessage message) {
-    return new ProcessedMessageDTO(message.senderId(), message.chatroomId(), message.sentAt(), message.contents());
+  public static MessageDTO toDTO(ChatMessage message) {
+    return new MessageDTO(message.id(), message.senderId(), message.chatroomId(), message.sentAt(), message.contents());
   }
 
   public static ChatroomListDTO toDTO(List<Chatroom> chatrooms) {
