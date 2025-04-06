@@ -67,6 +67,7 @@ public class ChatMessagingController {
   public void getUsers(@DestinationVariable String chatroomId,
                        Principal principal) {
     List<ChatUser> users = chatService.getChatroomUsers(principal.getName(), chatroomId);
+    senderService.addUsersToChatroom(chatroomId, principal.getName(), users.stream().map(Converters::toDTO).toList());
   }
 
   @MessageMapping("/create")

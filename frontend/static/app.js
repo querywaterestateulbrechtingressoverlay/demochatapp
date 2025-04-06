@@ -19,10 +19,10 @@ stompClient.onConnect = (frame) => {
     receiveNewMessage(JSON.parse(messageDTO.body));
   });
   stompClient.subscribe("/user/" + userId + "/userlist", (userList) => {
-    receiveUserListUpdate(JSON.parse(userList.body));
+    receiveUserListUpdate(JSON.parse(userList.body), userList.headers['operation']);
   });
   stompClient.subscribe("/user/" + userId + "/chatrooms", (chatroomList) => {
-    receiveChatroomListUpdate(JSON.parse(chatroomList.body).chatrooms);
+    receiveChatroomListUpdate(JSON.parse(chatroomList.body).chatrooms, chatroomList.headers['operation']);
   });
   stompClient.subscribe("/user/" + userId + "/chatrooms/messages", (chatroomHistory) => {
     receiveChatHistoryUpdate(JSON.parse(chatroomHistory.body).chatId, JSON.parse(chatroomHistory.body).messageList);
@@ -87,27 +87,78 @@ function showUserList(chatroomId) {
   }
 }
 
-function receiveUserListUpdate(userList) {
-  cachedUsers.set(userList.chatId, userList.users);
+function receiveUserListUpdate(userList, operation) {
+  if (operation == null || operation == 'replace') {
+    cachedUsers.set(userList.chatId, userList.users);
+  } else if (operation == 'add') {
+    if (!cachedUsers.has(userList.chatId)) {
+      cachedUsers.set(userList.chatId, userList.users);
+    } else {
+      cachedUsers.set(userList.chatId, cachedUsers.get(userList.chatId).concat(userList.users));
+    }
+  } else if (operation == 'remove') {
+    if (cachedUsers.has(userList.chatId)) {
+      const users = cachedUsers.get(chatroomId);
+      const idsToRemove = userList.users.map(u => u.id);
+      cachedUsers.set(userList.chatId, users.filter(u => !idsToRemove.includes(u.id)));
+    }
+  }
   if (currentChatroom == userList.chatId) {
     showUserList(userList.chatId);
   }
 }
 
-function receiveChatroomListUpdate(chatroomList) {
-  $("#chatroom-list").empty();
-  chatrooms.clear();
+function addChatroomToDOM(chatroom) {
+  $("#chatroom-list")
+    .append(
+      `<tr>
+        <td
+          data-roomId="${chatroom.id}"
+          id="chatroom-${chatroom.id}"
+          class="chatroom">${chatroom.name}
+        </td>
+      </tr>`
+    );
+}
+
+function removeChatroomFromDOM(id) {
+  $(`#chatroom-${chatroomId}`).remove();
+}
+
+function addChatrooms(chatroomList) {
   for (const chatroom of chatroomList) {
     chatrooms.set(chatroom.id, chatroom.name);
-    $("#chatroom-list")
-      .append("<tr><td data-roomId=\"" + chatroom.id + "\" id=\"chatroom-"
-      + chatroom.id + "\" class=\"chatroom\">" + chatroom.name + "</td></tr>");
+    cachedMessages.set(chatroom.id, new Array());
+    cachedUsers.set(chatroom.id, new Array());
+    addChatroomToDOM(chatroom);
   }
-  if (currentChatroom == null || !chatrooms.has(currentChatroom)) {
-    if (!chatrooms.has(currentChatroom)) {
-      cachedMessages.delete(currentChatroom);
-      cachedUsers.delete(currentChatroom);
+}
+
+function removeChatrooms(chatroomList) {
+  for (const chatroom of chatroomList) {
+    if (chatrooms.has(chatroom.id)) {
+      chatrooms.delete(chatroom.id);
+      cachedMessages.delete(chatroom.id);
+      cachedUsers.delete(chatroom.id);
+      removeChatroomFromDOM(chatroom);
     }
+  }
+}
+
+function receiveChatroomListUpdate(chatroomList, operation) {
+  if (operation == null || operation == 'replace') {
+    $("#chatroom-list").empty();
+    chatrooms.clear();
+    cachedMessages.clear();
+    cachedUsers.clear();
+    addChatrooms(chatroomList);
+  } else if (operation == 'add') {
+    addChatrooms(chatroomList);
+  } else if (operation == 'remove') {
+    removeChatrooms(chatroomList);
+  }
+  // switch chatrooms if we don't have a current chatroom after just loading the list or if the current chatroom got deleted
+  if (currentChatroom == null || !chatrooms.has(currentChatroom)) {
     currentChatroom = chatrooms.keys().next().value;
     switchChatrooms(currentChatroom);
   }
@@ -153,10 +204,10 @@ function receieveChatHistoryUpdate(chatroomId, messageList) {
 }
 
 function switchChatrooms(chatroomId) {
-  if (!cachedMessages.has(chatroomId)) {
+  if (!cachedMessages.has(chatroomId.toString()) || cachedMessages.get(chatroomId.toString()).length == 0) {
     requestChatHistoryUpdate(chatroomId);
   }
-  if (!cachedUsers.has(chatroomId)) {
+  if (!cachedUsers.has(chatroomId.toString()) || cachedUsers.get(chatroomId.toString()).length == 0) {
     requestChatUserListUpdate();
   }
   showCachedMessages();
@@ -197,12 +248,38 @@ function kickUser(userId) {
   });
 }
 
+async function register() {
+  try {
+    const response = await fetch(backendUrl + "/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: $("#register-username").val(),
+        password: $("#register-password").val()
+      })
+    });
+
+    if (response.ok) {
+      alert("Registration successful! You can now login.");
+    } else {
+      const error = await response.json();
+      alert("Registration failed: " + (error.message || "Unknown error"));
+    }
+  } catch (error) {
+    console.error(error);
+    alert("Registration failed: " + error.message);
+  }
+}
+
 $(function () {
   $(document).on("click", ".chatroom", function() {
     currentChatroom = $(this).data("roomid");
     switchChatrooms($(this).data("roomid"));
   });
   $("#login-submit").click(async () => await login());
+  $("#register-submit").click(async () => await register());
   $("#invite-submit").click(() => inviteUser());
   $(document).on("click", ".kick-user", function() {
     const userId = $(this).data("userid");

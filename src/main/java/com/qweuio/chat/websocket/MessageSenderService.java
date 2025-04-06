@@ -16,7 +16,7 @@ public class MessageSenderService {
   private final String messageDest = "/messages";
   private final String messageHistoryDest = "/messages/history";
   private final String chatroomListUpdateDest = "/chatrooms";
-  private final String chatroomUserListUpdDest = "/chatrooms/users";
+  private final String chatroomUserListUpdDest = "/userlist";
   private final String errorDest = "/errors";
 
   Logger logger = LoggerFactory.getLogger(MessageSenderService.class);
@@ -47,10 +47,19 @@ public class MessageSenderService {
       template.convertAndSendToUser(
         recipientId,
         chatroomUserListUpdDest,
-        user,
+        new ChatUserListDTO(chatroomId, List.of(user)),
         Map.of("operation", "add")
       );
     }
+  }
+
+  public void addUsersToChatroom(String chatroomId, String recipient, List<UserShortInfoDTO> users) {
+    template.convertAndSendToUser(
+      recipient,
+      chatroomUserListUpdDest,
+      new ChatUserListDTO(chatroomId, users),
+      Map.of("operation", "add")
+    );
   }
 
   public void removeUserFromChatroom(String chatroomId, String userId) {
