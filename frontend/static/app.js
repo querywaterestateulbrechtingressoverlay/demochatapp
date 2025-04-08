@@ -248,6 +248,18 @@ function kickUser(userId) {
   });
 }
 
+function createChatroom() {
+  const chatroomName = $("#chatroom-name").val();
+  if (chatroomName.trim() === "") return;
+
+  stompClient.publish({
+    destination: "/chat/create",
+    body: JSON.stringify({'chatroomName': chatroomName})
+  });
+
+  $("#chatroom-name").val(""); // Clear the input field
+}
+
 async function register() {
   try {
     const response = await fetch(backendUrl + "/register", {
@@ -256,7 +268,7 @@ async function register() {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        username: $("#register-username").val(),
+        login: $("#register-username").val(),
         password: $("#register-password").val()
       })
     });
@@ -281,6 +293,7 @@ $(function () {
   $("#login-submit").click(async () => await login());
   $("#register-submit").click(async () => await register());
   $("#invite-submit").click(() => inviteUser());
+  $("#create-chatroom-submit").click(() => createChatroom());
   $(document).on("click", ".kick-user", function() {
     const userId = $(this).data("userid");
     kickUser(userId);

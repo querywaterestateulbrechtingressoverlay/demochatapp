@@ -14,7 +14,7 @@ import java.util.Map;
 @Service
 public class MessageSenderService {
   private final String messageDest = "/messages";
-  private final String messageHistoryDest = "/messages/history";
+  private final String messageHistoryDest = "/chatrooms/messages";
   private final String chatroomListUpdateDest = "/chatrooms";
   private final String chatroomUserListUpdDest = "/userlist";
   private final String errorDest = "/errors";
@@ -25,6 +25,7 @@ public class MessageSenderService {
 
   public void sendMessage(ChatMessage message, List<String> recipients) {
     logger.trace("sending message to chatroom {}", message.chatroomId());
+    logger.info(recipients.toString());
     for (String recipientId : recipients) {
       template.convertAndSendToUser(recipientId, messageDest, message);
     }

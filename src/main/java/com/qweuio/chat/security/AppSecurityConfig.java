@@ -38,25 +38,14 @@ public class AppSecurityConfig {
 
   @Bean
   @Order(1)
-  SecurityFilterChain securityConfigCsrfEndpoint(HttpSecurity http) throws Exception {
-    return http
-      .securityMatchers((r) -> r.requestMatchers("/csrf/**"))
-      .csrf(AbstractHttpConfigurer::disable)
-      .authorizeHttpRequests(
-        (auth) -> auth
-          .requestMatchers(HttpMethod.GET, "/csrf").permitAll())
-      .build();
-  }
-
-  @Bean
-  @Order(2)
   SecurityFilterChain securityConfigAuth(HttpSecurity http) throws Exception {
     return http
-      .securityMatchers((r) -> r.requestMatchers("/token/**", "/websocket/**"))
+      .securityMatchers((r) -> r.requestMatchers("/register/**", "/token/**", "/websocket/**"))
       .csrf(AbstractHttpConfigurer::disable)
       .cors(Customizer.withDefaults())
       .authorizeHttpRequests(
         (auth) -> auth
+          .requestMatchers(HttpMethod.POST, "/register").permitAll()
           .requestMatchers(HttpMethod.POST, "/token").authenticated()
           .requestMatchers(HttpMethod.GET, "/websocket").permitAll())
       .httpBasic(Customizer.withDefaults())
@@ -64,7 +53,7 @@ public class AppSecurityConfig {
   }
 
   @Bean
-  @Order(3)
+  @Order(2)
   SecurityFilterChain securityConfigMain(HttpSecurity http) throws Exception {
     return http
       .cors(Customizer.withDefaults())

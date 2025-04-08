@@ -1,5 +1,6 @@
 package com.qweuio.chat.security;
 
+import com.qweuio.chat.persistence.entity.ChatUser;
 import com.qweuio.chat.persistence.repository.ChatUserRepository;
 import com.qweuio.chat.security.data.UserCredentials;
 import com.qweuio.chat.security.data.UserCredentialsRepository;
@@ -16,6 +17,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Collections;
+
 public class CustomUserDetailsService implements UserDetailsManager {
   private final Logger logger = LoggerFactory.getLogger(CustomUserDetailsService.class);
   @Autowired
@@ -30,23 +33,24 @@ public class CustomUserDetailsService implements UserDetailsManager {
     logger.info("loading user {}", username);
     var userInfo = userRepository.findByName(username)
         .orElseThrow(() -> new UsernameNotFoundException("user " + username + " was not found"));
-    var userCredentials = userCredentialsRepository.findById(Integer.valueOf(userInfo.id())).orElseThrow(RuntimeException::new);
+    var userCredentials = userCredentialsRepository.findById(userInfo.id()).orElseThrow(RuntimeException::new);
     return User.builder()
-      .username(userCredentials.id().toString())
+      .username(userCredentials.id())
       .password(userCredentials.password())
       .authorities(userCredentials.authorities().stream().map(SimpleGrantedAuthority::new).toList())
       .build();
   }
 
   @Override
-  public void createUser(UserDetails user) {
-    userCredentialsRepository.insert(new UserCredentials(Integer.valueOf(user.getUsername()), user.getPassword(), user.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList()));
+  public void createUser(UserDetails userDetails) {
+    ChatUser user = userRepository.save(new ChatUser(null, userDetails.getUsername(), Collections.emptyList()));
+    userCredentialsRepository.insert(new UserCredentials(user.id(), userDetails.getPassword(), userDetails.getAuthorities().stream().map(GrantedAuthority::getAuthority).toList()));
   }
 
   @Override
   public void updateUser(UserDetails user) {
     var userCredentials = userCredentialsRepository
-        .findById(Integer.valueOf(user.getUsername()))
+        .findById(user.getUsername())
         .orElseThrow(() -> new UsernameNotFoundException("error while updating: username " + user.getUsername() + " not found"));
     userCredentialsRepository.save(new UserCredentials(userCredentials.id(), user.getPassword(), user.getAuthorities()
         .stream()
@@ -56,10 +60,10 @@ public class CustomUserDetailsService implements UserDetailsManager {
 
   @Override
   public void deleteUser(String userId) {
-    if (!userCredentialsRepository.existsById(Integer.valueOf(userId))) {
+    if (!userCredentialsRepository.existsById(userId)) {
       throw new UsernameNotFoundException("error while deleting: user with id " + userId + " not found");
     } else {
-      userCredentialsRepository.deleteById(Integer.valueOf(userId));
+      userCredentialsRepository.deleteById(userId);
     }
   }
 
@@ -69,6 +73,6 @@ public class CustomUserDetailsService implements UserDetailsManager {
 
   @Override
   public boolean userExists(String username) {
-    return userCredentialsRepository.existsById(Integer.valueOf(username));
+    return userRepository.findByName(username).isPresent();
   }
 }

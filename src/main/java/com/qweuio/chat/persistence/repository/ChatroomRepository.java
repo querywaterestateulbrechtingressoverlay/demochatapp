@@ -18,12 +18,13 @@ public interface ChatroomRepository extends MongoRepository<Chatroom, String> {
   })
   Optional<UserWithRoleEntity> getUserRoleFromChatroomById(String chatroomId, String userId);
   @Aggregation({
-    "{ $match: { '_id': ?0 } }",
+    "{ $match: { $expr: { $eq: ['$_id', { $toObjectId: '?0' }] } } }",
     "{ $unwind: '$users' }",
+    "{ $addFields: { 'userId': { $toObjectId: '$users.userId' } } }",
     """
     { $lookup: {
       from: 'users',
-      localField: 'users.userId',
+      localField: 'userId',
       foreignField: '_id',
       as: 'users' }
     }""",
@@ -32,8 +33,8 @@ public interface ChatroomRepository extends MongoRepository<Chatroom, String> {
   })
   List<ChatUser> getUsersByChatroom(String chatroomId);
   @Aggregation({
-    "{ $match: { '_id': ?0 } }",
-    "$project: { count: { $size: $users } _id: 0 }"
+    "{ $match: { '_id': '?0' } }",
+    "{ $project: { count: { $size: '$users' }, _id: 0 } }"
   })
   Optional<Integer> getUserCount(String chatroomId);
 }

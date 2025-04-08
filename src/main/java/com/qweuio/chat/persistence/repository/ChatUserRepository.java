@@ -29,7 +29,7 @@ public interface ChatUserRepository extends MongoRepository<ChatUser, String> {
 
   @Aggregation({
     "{ $match: { '_id': ?0 } }",
-    "$project: { count: { $size: $chatrooms } _id: 0 }"
+    "{ $project: { count: { $size: '$chatrooms' }, _id: 0 } }"
   })
   Optional<Integer> getChatroomCount(String userToAdd);
 }

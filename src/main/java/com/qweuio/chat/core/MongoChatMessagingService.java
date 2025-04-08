@@ -1,5 +1,6 @@
 package com.qweuio.chat.core;
 
+import com.mongodb.client.result.UpdateResult;
 import com.qweuio.chat.core.exception.*;
 import com.qweuio.chat.core.exception.chatapp.*;
 import com.qweuio.chat.persistence.MessagePersistingService;
@@ -11,6 +12,8 @@ import com.qweuio.chat.persistence.repository.ChatUserRepository;
 import com.qweuio.chat.persistence.repository.ChatroomRepository;
 import com.qweuio.chat.websocket.dto.MessageRequestDTO;
 import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
@@ -28,6 +31,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
   public enum UserRole {
     NOT_A_MEMBER, MEMBER, ADMIN
   }
+  Logger logger = LoggerFactory.getLogger(MongoChatMessagingService.class);
   @Autowired
   MessagePersistingService msgPersistingService;
   @Autowired
@@ -188,14 +192,16 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
 
   @Override
   public void addUserToChatroom(String chatroomId, String userId) {
-    mongoTemplate.updateFirst(
+    UpdateResult u1 = mongoTemplate.updateFirst(
       new Query(Criteria.where("_id").is(userId)),
       new Update().addToSet("chatrooms", chatroomId),
       "users");
-    mongoTemplate.updateFirst(
-      new Query(Criteria.where("_id").is(userId)),
+    logger.info(u1.toString());
+    UpdateResult u2 = mongoTemplate.updateFirst(
+      new Query(Criteria.where("_id").is(chatroomId)),
       new Update().addToSet("users", new UserWithRoleEntity(userId, "MEMBER")),
       "chatrooms");
+    logger.info(u2.toString());
   }
 
   @Override
@@ -216,6 +222,9 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
 
   @Override
   public List<ChatUser> getChatroomUsers(String chatroomId) {
-    return chatroomRepo.getUsersByChatroom(chatroomId);
+    logger.info("getting users from chatroom {}",chatroomId);
+    List<ChatUser> users = chatroomRepo.getUsersByChatroom(chatroomId);
+    logger.info("users: {}", users.toString());
+    return users;
   }
 }

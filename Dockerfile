@@ -7,4 +7,4 @@ ENV KAFKA_HOST=$KAFKA_HOST
 ENV REDIS_HOST=$REDIS_HOST
 ENV MONGO_HOST=$MONGO_HOST
 COPY ${JAR_FILE} app.jar
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005", "-jar", "app.jar"]

@@ -41,3 +41,4 @@ services:
      - MONGO_HOST=mongo
     expose:
      - 8080
+     - 5005

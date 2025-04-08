@@ -6,7 +6,7 @@ import java.util.List;
 
 public record UserCredentials(
     @Id
-    Integer id,
+    String id,
     String password,
     List<String> authorities
 ) {

@@ -4,6 +4,8 @@ import com.qweuio.chat.security.dto.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.config.annotation.authentication.configurers.provisioning.UserDetailsManagerConfigurer;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.User;
@@ -46,21 +48,22 @@ public class SecurityController {
       .subject(authentication.getName())
       .claim("scope", scope)
       .build();
-    return new JWTokenDTO(encoder.encode(JwtEncoderParameters.from(claims)).getTokenValue(), Integer.valueOf(authentication.getName()), expirySeconds);
+    return new JWTokenDTO(encoder.encode(JwtEncoderParameters.from(claims)).getTokenValue(), authentication.getName(), expirySeconds);
   }
 
   @CrossOrigin
   @PostMapping("/register")
-  public boolean register(@RequestBody LoginInfoDTO loginInfoDTO) {
+  public ResponseEntity<String> register(@RequestBody LoginInfoDTO loginInfoDTO) {
     if (!customUDS.userExists(loginInfoDTO.login())) {
-      return false;
-    } else {
       customUDS.createUser(User.builder()
         .username(loginInfoDTO.login())
         .password(loginInfoDTO.password())
         .passwordEncoder(passwordEncoder::encode)
+        .authorities("SCOPE_chat")
         .build());
-      return true;
+      return ResponseEntity.ok("registration successful");
+    } else {
+      return new ResponseEntity<>("user with provided username already exists", HttpStatus.BAD_REQUEST);
     }
   }
 }

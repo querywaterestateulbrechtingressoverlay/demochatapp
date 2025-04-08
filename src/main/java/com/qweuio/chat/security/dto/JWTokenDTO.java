@@ -2,7 +2,7 @@ package com.qweuio.chat.security.dto;
 
 public record JWTokenDTO(
     String token,
-    Integer id,
+    String id,
     long expirySeconds
 ) {
 }

@@ -50,7 +50,7 @@ public class ChatMessagingController {
     senderService.sendMessage(
       processedMessage,
       chatService.getChatroomUsers(chatroomId)
-        .parallelStream()
+        .stream()
         .map(ChatUser::id)
         .toList());
   }
