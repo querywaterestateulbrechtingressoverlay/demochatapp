@@ -1,4 +1,4 @@
-package com.qweuio.chat.messaging;
+package com.qweuio.chat.persistence.config;
 
 import org.apache.kafka.clients.admin.AdminClientConfig;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -12,8 +12,6 @@ import org.springframework.kafka.config.TopicBuilder;
 import org.springframework.kafka.core.*;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
-import org.springframework.kafka.support.serializer.ParseStringDeserializer;
-import org.springframework.kafka.support.serializer.ToStringSerializer;
 
 import java.util.HashMap;
 import java.util.Map;

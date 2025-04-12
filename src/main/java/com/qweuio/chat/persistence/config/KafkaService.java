@@ -1,4 +1,4 @@
-package com.qweuio.chat.messaging;
+package com.qweuio.chat.persistence.config;
 
 import com.qweuio.chat.websocket.dto.ChatUserListDTO;
 import com.qweuio.chat.websocket.dto.outbound.MessageDTO;

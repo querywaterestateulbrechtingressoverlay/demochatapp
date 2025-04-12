@@ -1,4 +1,4 @@
-package com.qweuio.chat.persistence;
+package com.qweuio.chat.persistence.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;

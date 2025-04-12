@@ -33,7 +33,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
   }
   Logger logger = LoggerFactory.getLogger(MongoChatMessagingService.class);
   @Autowired
-  MessagePersistingService msgPersistingService;
+  private MessagePersistingService msgPersistingService;
   @Autowired
   private ChatroomRepository chatroomRepo;
   @Autowired

@@ -1,4 +1,4 @@
-package com.qweuio.chat.persistence;
+package com.qweuio.chat.persistence.config;
 
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -35,14 +35,6 @@ public class RedisConfig {
   public RedisTemplate<String, ChatMessage> redisTemplate(RedisConnectionFactory connectionFactory) {
     RedisTemplate<String, ChatMessage> template = new RedisTemplate<>();
     template.setConnectionFactory(connectionFactory);
-//    GenericJackson2JsonRedisSerializer serializer = GenericJackson2JsonRedisSerializer.builder()
-//        .objectMapper(
-//          JsonMapper.builder()
-//            .addModule(new JavaTimeModule())
-//            .findAndAddModules()
-//            .build()
-//        ).build();
-    //    template.setValueSerializer(serializer);
     template.setKeySerializer(new StringRedisSerializer());
     var valueSerializer = new Jackson2JsonRedisSerializer<ChatMessage>(JsonMapper.builder()
             .addModule(new JavaTimeModule())
