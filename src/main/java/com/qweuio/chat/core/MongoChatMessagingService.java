@@ -19,6 +19,7 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -27,7 +28,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class MongoChatMessagingService implements ChatMessagingService<String, String> {
+public class MongoChatMessagingService {
   public enum UserRole {
     NOT_A_MEMBER, MEMBER, ADMIN
   }
@@ -64,12 +65,12 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
     return msgPersistingService.getRecentMessages(chatroomId);
   }
 
-  @Override
+  
   public ChatUser getUserInfo(String userId) {
     return chatUserRepo.findById(userId).orElseThrow();
   }
 
-  @Override
+  
   public ChatMessage sendMessage(String senderId, String chatroomId, MessageRequestDTO message) {
     try {
       if (!chatroomRepo.existsById(chatroomId)) {
@@ -84,7 +85,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
     }
   }
 
-  @Override
+  
   public Chatroom addUserToChatroom(String addingUser, String userToAdd, String chatroomId) {
     try {
       if (!verifyUserRole(addingUser, chatroomId, UserRole.ADMIN)) {
@@ -104,7 +105,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
       throw new UserActionException(addingUser, e.getMessage(), e);
     }
   }
-  @Override
+  
   public void removeUserFromChatroom(String removingUser, String userToRemove, String chatroomId) {
     try {
       if (!verifyUserRole(removingUser, chatroomId, UserRole.ADMIN) || verifyUserRole(userToRemove, chatroomId, UserRole.ADMIN)) {
@@ -115,7 +116,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
       throw new UserActionException(removingUser, e.getMessage(), e);
     }
   }
-  @Override
+  
   public Chatroom createChatroom(String creatorId, String chatroomName) {
     try {
       ChatUser creator = chatUserRepo.findById(creatorId).orElseThrow(() -> new RuntimeException("a ghost is trying to create a new chatroom"));
@@ -138,7 +139,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
       throw new UserActionException(creatorId, e.getMessage(), e);
     }
   }
-  @Override
+  
   public void deleteChatroom(String deletingUserId, String chatroomId) {
     try {
       if (!chatroomRepo.existsById(chatroomId)) {
@@ -153,7 +154,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
     }
   }
 
-  @Override
+  
   public List<ChatUser> getChatroomUsers(String requestingUserId, String chatroomId) {
     try {
       if (verifyUserRole(requestingUserId, chatroomId, UserRole.NOT_A_MEMBER)) {
@@ -165,7 +166,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
     }
   }
 
-  @Override
+  
   public String createChatroom(String chatroomName) {
     return chatroomRepo.save(
       new Chatroom(
@@ -175,7 +176,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
       .id();
   }
 
-  @Override
+  
   public void deleteChatroom(String chatroomId) {
     List<String> chatUsers = chatroomRepo
       .getUsersByChatroom(chatroomId)
@@ -190,7 +191,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
     chatroomRepo.deleteById(chatroomId);
   }
 
-  @Override
+  
   public void addUserToChatroom(String chatroomId, String userId) {
     UpdateResult u1 = mongoTemplate.updateFirst(
       new Query(Criteria.where("_id").is(userId)),
@@ -204,7 +205,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
     logger.info(u2.toString());
   }
 
-  @Override
+  
   public void removeUserFromChatroom(String chatroomId, String userId) {
     UserWithRoleEntity kickTarget = chatroomRepo
       .getUserRoleFromChatroomById(chatroomId, userId)
@@ -220,7 +221,7 @@ public class MongoChatMessagingService implements ChatMessagingService<String, S
       "chatrooms");
   }
 
-  @Override
+  
   public List<ChatUser> getChatroomUsers(String chatroomId) {
     logger.info("getting users from chatroom {}",chatroomId);
     List<ChatUser> users = chatroomRepo.getUsersByChatroom(chatroomId);

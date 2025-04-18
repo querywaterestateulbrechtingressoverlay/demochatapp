@@ -2,7 +2,6 @@ package com.qweuio.chat.websocket;
 
 import com.qweuio.chat.core.MongoChatMessagingService;
 import com.qweuio.chat.core.exception.*;
-import com.qweuio.chat.persistence.config.KafkaService;
 import com.qweuio.chat.persistence.entity.ChatMessage;
 import com.qweuio.chat.persistence.entity.ChatUser;
 import com.qweuio.chat.persistence.entity.Chatroom;
@@ -22,11 +21,9 @@ import java.util.*;
 public class ChatMessagingController {
   Logger logger = LoggerFactory.getLogger(ChatMessagingController.class);
   @Autowired
-  KafkaService kafkaService;
-  @Autowired
   MongoChatMessagingService chatService;
   @Autowired
-  MessageSenderService senderService;
+  LocalMessageSenderService senderService;
 
   @MessageExceptionHandler({UserActionException.class})
   void userActionException(UserActionException exception) {
@@ -45,12 +42,7 @@ public class ChatMessagingController {
                           Principal principal) {
     logger.info("send message, user {}", principal.getName());
     ChatMessage processedMessage = chatService.sendMessage(principal.getName(), chatroomId, message);
-    senderService.sendMessage(
-      processedMessage,
-      chatService.getChatroomUsers(chatroomId)
-        .stream()
-        .map(ChatUser::id)
-        .toList());
+    senderService.sendMessage(processedMessage, chatroomId);
   }
 
   @MessageMapping("/{chatroomId}/getRecentHistory")
@@ -65,7 +57,7 @@ public class ChatMessagingController {
   public void getUsers(@DestinationVariable String chatroomId,
                        Principal principal) {
     List<ChatUser> users = chatService.getChatroomUsers(principal.getName(), chatroomId);
-    senderService.addUsersToChatroom(chatroomId, principal.getName(), users.stream().map(Converters::toDTO).toList());
+    senderService.addUsersToChatroom(chatroomId, users.stream().map(Converters::toDTO).toList());
   }
 
   @MessageMapping("/create")
@@ -86,14 +78,7 @@ public class ChatMessagingController {
                         @DestinationVariable String chatroomId,
                         Principal principal) {
     Chatroom chatroom = chatService.addUserToChatroom(principal.getName(), userToInvite.userId(), chatroomId);
-    senderService.addUserToChatroom(
-      chatroomId,
-      chatService.getChatroomUsers(chatroomId)
-        .stream()
-        .map(ChatUser::id)
-        .toList(),
-      Converters.toDTO(chatService
-        .getUserInfo(userToInvite.userId())));
+    senderService.addUserToChatroom(chatroomId, Converters.toDTO(chatService.getUserInfo(userToInvite.userId())));
     senderService.addChatroomToUser(userToInvite.userId(), Converters.toDTO(List.of(chatroom)));
   }
 
