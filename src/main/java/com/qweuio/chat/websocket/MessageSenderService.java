@@ -26,9 +26,9 @@ public interface MessageSenderService {
 
   void removeChatroomFromUser(String userId, String chatroomId);
 
-  void addUserToChatroom(String chatroomId, UserShortInfoDTO user);
+  void addUserToChatroom(String chatroomId, List<UserShortInfoDTO> users);
 
-  void addUsersToChatroom(String chatroomId, List<UserShortInfoDTO> users);
+  void addUserToChatroom(String chatroomId, String userId, List<UserShortInfoDTO> users);
 
   void removeUserFromChatroom(String chatroomId, String userId);
 }

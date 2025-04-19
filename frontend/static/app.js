@@ -172,8 +172,8 @@ function receiveNewMessage(message) {
     message: message.message,
     senderId: message.senderId
   });
-  if (message.chatroomId == currentChatroom) {
-    $("#message-list").append("<tr><td>" + message.senderId + " at " + message.sentAt + ":" + message.content + "</td></tr>");
+  if (message.chatroom == currentChatroom) {
+    $("#message-list").append("<tr><td>" + message.sender + " at " + message.timestamp + ":" + message.content + "</td></tr>");
   }
 }
 

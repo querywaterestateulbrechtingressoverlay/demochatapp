@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Collections;
 
+
 public class CustomUserDetailsService implements UserDetailsManager {
   private final Logger logger = LoggerFactory.getLogger(CustomUserDetailsService.class);
   @Autowired

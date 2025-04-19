@@ -15,6 +15,7 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.provisioning.UserDetailsManager;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
@@ -30,7 +31,7 @@ public class SecurityController {
   @Autowired
   JwtEncoder encoder;
   @Autowired
-  CustomUserDetailsService customUDS;
+  UserDetailsManager customUDS;
 
   @CrossOrigin
   @PostMapping("/token")

@@ -23,7 +23,7 @@ public class ChatMessagingController {
   @Autowired
   MongoChatMessagingService chatService;
   @Autowired
-  LocalMessageSenderService senderService;
+  KafkaMessageSenderService senderService;
 
   @MessageExceptionHandler({UserActionException.class})
   void userActionException(UserActionException exception) {
@@ -57,7 +57,7 @@ public class ChatMessagingController {
   public void getUsers(@DestinationVariable String chatroomId,
                        Principal principal) {
     List<ChatUser> users = chatService.getChatroomUsers(principal.getName(), chatroomId);
-    senderService.addUsersToChatroom(chatroomId, users.stream().map(Converters::toDTO).toList());
+    senderService.addUserToChatroom(chatroomId, users.stream().map(Converters::toDTO).toList());
   }
 
   @MessageMapping("/create")
@@ -78,7 +78,7 @@ public class ChatMessagingController {
                         @DestinationVariable String chatroomId,
                         Principal principal) {
     Chatroom chatroom = chatService.addUserToChatroom(principal.getName(), userToInvite.userId(), chatroomId);
-    senderService.addUserToChatroom(chatroomId, Converters.toDTO(chatService.getUserInfo(userToInvite.userId())));
+    senderService.addUserToChatroom(chatroomId, List.of(Converters.toDTO(chatService.getUserInfo(userToInvite.userId()))));
     senderService.addChatroomToUser(userToInvite.userId(), Converters.toDTO(List.of(chatroom)));
   }
 
