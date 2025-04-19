@@ -12,7 +12,7 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
 @Component
 public class WebSocketConnectedClientManager {
-  private final String CHATROOM_PREFIX = "CHATROOM_";
+  private final String CHATROOM_PREFIX = "CHATROOM_USERS_";
   private final String CHATROOM_LIST_KEY = "SUBSCRIBED_CHATROOMS";
 
   @Autowired
@@ -22,18 +22,27 @@ public class WebSocketConnectedClientManager {
 
   @EventListener(SessionConnectEvent.class)
   void onClientConnect(SessionConnectEvent connectEvent) {
-    var connectedUserChatrooms = chatUserRepo.getChatroomsByUser(connectEvent.getUser().getName()).stream().map(Chatroom::id).toList();
-    var diff = redisTemplate.opsForSet().difference(CHATROOM_LIST_KEY, connectedUserChatrooms);
-    if (!diff.isEmpty()) {
-      redisTemplate.opsForSet().add(CHATROOM_LIST_KEY, diff.toArray(String[]::new));
-    }
+    String userId = connectEvent.getUser().getName();
+    var connectedUserChatrooms = chatUserRepo
+      .getChatroomsByUser(userId)
+      .stream()
+      .map(Chatroom::id)
+      .toArray(String[]::new);
+
+    redisTemplate.opsForSet().add(CHATROOM_LIST_KEY, connectedUserChatrooms);
+
     for (String chatroomId : connectedUserChatrooms) {
-      redisTemplate.opsForSet().add(CHATROOM_PREFIX + chatroomId, connectEvent.getUser().getName());
+      redisTemplate.opsForSet().add(CHATROOM_PREFIX + chatroomId, userId);
     }
   }
 
   @EventListener(SessionDisconnectEvent.class)
-  void onClientDisconnect() {
-
+  void onClientDisconnect(SessionDisconnectEvent disconnectEvent) {
+    String userId = disconnectEvent.getUser().getName();
+    chatUserRepo
+      .getChatroomsByUser(userId)
+      .stream()
+      .map(Chatroom::id)
+      .forEach((chatroomId) -> redisTemplate.opsForSet().remove(CHATROOM_PREFIX + chatroomId, userId));
   }
 }

@@ -46,8 +46,8 @@ public class AppSecurityConfig {
       .authorizeHttpRequests(
         (auth) -> auth
           .requestMatchers(HttpMethod.POST, "/register").permitAll()
-          .requestMatchers(HttpMethod.POST, "/token").authenticated()
-          .requestMatchers(HttpMethod.GET, "/websocket").permitAll())
+          .requestMatchers(HttpMethod.GET, "/websocket").permitAll()
+          .requestMatchers(HttpMethod.POST, "/token").authenticated())
       .httpBasic(Customizer.withDefaults())
       .build();
   }
@@ -59,10 +59,6 @@ public class AppSecurityConfig {
       .cors(Customizer.withDefaults())
       .csrf(AbstractHttpConfigurer::disable)
       .authorizeHttpRequests((auth) -> auth
-        .requestMatchers(HttpMethod.GET, "/error").permitAll()
-        .requestMatchers(HttpMethod.GET, "/mockinit").permitAll()
-        .requestMatchers(HttpMethod.GET, "/ping").access(hasScope("chat"))
-        .requestMatchers(HttpMethod.GET, "/**", "/js/**", "/css/**").access(hasScope("chat"))
         .anyRequest().access(hasScope("chat"))
       )
       .oauth2ResourceServer(o -> o.jwt(Customizer.withDefaults()))

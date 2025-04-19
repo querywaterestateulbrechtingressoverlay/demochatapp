@@ -7,19 +7,24 @@ import com.qweuio.chat.websocket.dto.UserShortInfoDTO;
 import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
 public class KafkaMessageSenderService implements MessageSenderService {
-  @Value("${chatapp.kafka.message-topic}")
-  private String sendMsgTopic;
-  @Value("${chatapp.kafka.user-list-topic}")
-  private String userListTopic;
+  private final String sendMsgTopic = "${chatapp.kafka.message-topic}";
+  private final String userListTopic = "${chatapp.kafka.user-list-topic}";
+
   @Autowired
   KafkaTemplate<String, Object> kafkaMessageTemplate;
+
+  @Autowired
+  SimpMessagingTemplate template;
+
   public void sendMessage(MessageDTO message) {
     kafkaMessageTemplate.send(sendMsgTopic, message);
   }
@@ -27,9 +32,16 @@ public class KafkaMessageSenderService implements MessageSenderService {
   public void updateUserList(ChatUserListDTO userList) {
     kafkaMessageTemplate.send(userListTopic, userList);
   }
+
+  @KafkaListener(topics = {sendMsgTopic})
+  void receiveMessage(MessageDTO message) {
+    var messageRecipients = 
+    template.convertAndSendToUser(recipientId, messageDest, message);
+  }
+
   @Override
   public void sendMessage(ChatMessage message, String chatroomId) {
-
+    kafkaMessageTemplate.send(sendMsgTopic, message);
   }
 
   @Override

@@ -22,10 +22,10 @@ import java.util.List;
 @Service
 public class MessagePersistingService {
   private final int RECENT_MESSAGE_COUNT = 10;
-  private final String CACHED_CHATROOMS = "cached-chatrooms";
+  private final String CACHED_CHATROOMS = "cachedchatrooms";
   private final String CHATROOM_PREFIX = "chatroom:";
   private final Logger logger = LoggerFactory.getLogger(MessagePersistingService.class);
-  final String sendMsgTopic = "${chatapp.kafka.message-topic}";
+  private final String sendMsgTopic = "${chatapp.kafka.message-topic}";
   @Autowired
   ChatMessageRepository messageRepository;
   @Autowired
@@ -54,7 +54,6 @@ public class MessagePersistingService {
     chatMessageCacheTemplate.expire(CHATROOM_PREFIX + message.chatroomId(), Duration.ofMinutes(5));
   }
 
-  @KafkaListener(id = "messagePersister", topics = sendMsgTopic)
   public ChatMessage persistMessage(MessageDTO message) {
     ChatMessage messageEntity = messageRepository.save(new ChatMessage(null, message.sender(), message.chatroom(), message.timestamp(), message.content()));
     cacheMessage(messageEntity);
