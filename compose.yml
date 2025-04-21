@@ -1,15 +1,26 @@
 services:
   mongo:
     build: ./persistence
+    image: 127.0.0.1:5000/mongo
     volumes:
      - ./persistence/init-scripts/init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     expose:
      - 27017
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
   redis:
     image: redis:latest
     volumes:
       - ./persistence/init-scripts/redis.conf:/usr/local/etc/redis/redis.conf
     entrypoint: redis-server /usr/local/etc/redis/redis.conf
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == worker
     expose:
      - 6379
   kafka:
@@ -29,16 +40,31 @@ services:
       KAFKA_NUM_PARTITIONS: 1
     expose:
      - 9092
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
   frontend:
     build: ./frontend/
+    image: 127.0.0.1:5000/frontend
     ports:
      - 80:80
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
   chatapp:
     build: .
+    image: 127.0.0.1:5000/chatapp
     environment:
      - KAFKA_HOST=kafka:9092
      - REDIS_HOST=redis
      - MONGO_HOST=mongo
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == worker
     expose:
      - 8080
      - 5005
