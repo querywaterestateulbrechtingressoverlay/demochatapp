@@ -12,4 +12,8 @@ do
     ssh $nodeip $JOIN_CMD
 done
 
+docker compose up --no-start
+docker compose push
+docker stack deploy -c compose.yml chatapp
+
 IFS=$OLDIFS
