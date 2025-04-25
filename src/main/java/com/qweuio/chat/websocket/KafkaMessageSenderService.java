@@ -7,6 +7,8 @@ import com.qweuio.chat.websocket.dto.*;
 import com.qweuio.chat.websocket.dto.outbound.ChatroomListUpdateDTO;
 import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 import com.qweuio.chat.websocket.dto.outbound.UserListUpdateDTO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.context.ServletWebServerApplicationContext;
@@ -22,6 +24,7 @@ import static com.qweuio.chat.websocket.dto.outbound.UserListUpdateDTO.Operation
 
 @Service
 public class KafkaMessageSenderService implements MessageSenderService {
+  Logger logger = LoggerFactory.getLogger(KafkaMessageSenderService.class);
   @Value("${chatapp.kafka.message-topic}")
   private String sendMsgTopic;
   @Value("${chatapp.kafka.user-list-update-topic}")
@@ -51,7 +54,9 @@ public class KafkaMessageSenderService implements MessageSenderService {
 
   @KafkaListener(id = "messageSender", topics = {"${chatapp.kafka.message-topic}"})
   void receiveMessage(MessageDTO message) {
+    logger.info("received message " + message.toString());
     var messageRecipients = userManagerService.getChatroomConnectedClients(message.chatroom());
+    logger.info("recipients: " + messageRecipients.toString());
     for (String recipientId : messageRecipients) {
       template.convertAndSendToUser(recipientId, messageDest, message);
     }
@@ -59,6 +64,7 @@ public class KafkaMessageSenderService implements MessageSenderService {
 
   @Override
   public void sendMessage(ChatMessage message, String chatroomId) {
+    logger.info("sending message " + message + " to chatroom " + chatroomId);
     kafkaMessageTemplate.send(sendMsgTopic, new MessageDTO(message.id(), message.senderId(), message.chatroomId(), message.sentAt(), message.contents()));
   }
 
@@ -70,15 +76,19 @@ public class KafkaMessageSenderService implements MessageSenderService {
 
   @KafkaListener(id = "chatroomListUpdater", topics = {"${chatapp.kafka.chatroom-list-update-topic}"})
   public void receiveChatroomListUpdate(ChatroomListUpdateDTO chatroomListUpdate) {
+    logger.info("received a chatroom update " + chatroomListUpdate.toString());
     if (userManagerService.isUserConnected(chatroomListUpdate.recipientId())) {
+      logger.info("user " + chatroomListUpdate.recipientId() + " is connected");
       template.convertAndSendToUser(chatroomListUpdate.recipientId(), chatroomListUpdateDest, new ChatroomListDTO(chatroomListUpdate.chatrooms()));
       for (ChatroomShortInfoDTO chatroom : chatroomListUpdate.chatrooms()) {
         if (chatroomListUpdate.operation() == ChatroomListUpdateDTO.Operation.ADD) {
-          userManagerService.addUserToChatroom(chatroomListUpdate.recipientId(), chatroom.id());
+          userManagerService.addUserToChatroom(chatroom.id(), chatroomListUpdate.recipientId());
         } else {
-          userManagerService.removeUserFromChatroom(chatroomListUpdate.recipientId(), chatroom.id());
+          userManagerService.removeUserFromChatroom(chatroom.id(), chatroomListUpdate.recipientId());
         }
       }
+    } else {
+      logger.info("user " + chatroomListUpdate.recipientId() + " is not connected");
     }
   }
 
@@ -94,8 +104,11 @@ public class KafkaMessageSenderService implements MessageSenderService {
 
   @KafkaListener(id = "userListUpdater", topics = {"${chatapp.kafka.user-list-update-topic}"})
   void receiveUserListUpdate(UserListUpdateDTO userListUpdate) {
+    logger.info("received a user list update " + userListUpdate.toString());
     if (userManagerService.isChatroomPresent(userListUpdate.chatroomId())) {
+      logger.info("connected users: " + userManagerService.getChatroomConnectedClients(userListUpdate.chatroomId()));
       for (String userId : userManagerService.getChatroomConnectedClients(userListUpdate.chatroomId())) {
+        logger.info("sending message to user " + userId);
         template.convertAndSendToUser(userId, chatroomUserListUpdDest, userListUpdate.chatroomId(), Map.of("operation", userListUpdate.operation().name().toLowerCase()));
       }
     }

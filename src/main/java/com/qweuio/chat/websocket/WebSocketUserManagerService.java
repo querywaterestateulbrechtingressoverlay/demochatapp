@@ -11,21 +11,36 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.socket.messaging.SessionConnectEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 @Service
 public class WebSocketUserManagerService {
-  private final String CHATROOM_PREFIX = "chatroomusers-_";
-  private final String CHATROOM_LIST_KEY = "subscribedchatrooms";
-  private final String USER_LIST_KEY = "connectedusers";
+  Set<String> connectedUsers = new HashSet<>();
+  Map<String, Set<String>> chatrooms = new HashMap<>();
 
-  @Autowired
-  private RedisTemplate<String, String> redisTemplate;
   @Autowired
   private ChatUserRepository chatUserRepo;
 
   Logger logger = LoggerFactory.getLogger(WebSocketUserManagerService.class);
+
+  public void addUserToChatroom(String chatroomId, String userId) {
+    chatrooms.compute(chatroomId, (k, v) -> {
+      if (v == null) {
+        return new HashSet<>(Set.of(userId));
+      } else {
+        v.add(userId);
+        return v;
+      }
+    });
+  }
+
+  public void removeUserFromChatroom(String chatroomId, String userId) {
+    var chatroom = chatrooms.get(chatroomId);
+    chatroom.remove(userId);
+    if (chatroom.isEmpty()) {
+      chatrooms.remove(chatroomId);
+    }
+  }
 
   @EventListener(SessionConnectEvent.class)
   void onClientConnect(SessionConnectEvent connectEvent) {
@@ -35,15 +50,11 @@ public class WebSocketUserManagerService {
       .stream()
       .map(Chatroom::id)
       .toArray(String[]::new);
-    if (connectedUserChatrooms.length != 0) {
-      redisTemplate.opsForSet().add(CHATROOM_LIST_KEY, connectedUserChatrooms);
-    }
-
+    logger.info("user " + userId + " has connected");
+    connectedUsers.add(userId);
     for (String chatroomId : connectedUserChatrooms) {
-      redisTemplate.opsForSet().add(CHATROOM_PREFIX + chatroomId, userId);
+      addUserToChatroom(chatroomId, userId);
     }
-    logger.info(" !!!!!! USER " + userId + " HAS CONNECTED !!!!!! ");
-    redisTemplate.opsForSet().add(USER_LIST_KEY, userId);
   }
 
   @EventListener(SessionDisconnectEvent.class)
@@ -54,35 +65,22 @@ public class WebSocketUserManagerService {
       .stream()
       .map(Chatroom::id)
       .forEach((chatroomId) -> {
-        redisTemplate.opsForSet().remove(CHATROOM_PREFIX + chatroomId, userId);
-        if (redisTemplate.opsForSet().size(CHATROOM_PREFIX + chatroomId) == 0) {
-          redisTemplate.opsForSet().remove(CHATROOM_LIST_KEY, chatroomId);
-        }
+        removeUserFromChatroom(chatroomId, userId);
       });
-    redisTemplate.opsForSet().remove(USER_LIST_KEY, userId);
+    logger.info("user " + userId + " has disconnected");
+    connectedUsers.remove(userId);
   }
 
-  public void addUserToChatroom(String userId, String chatroomId) {
-    redisTemplate.opsForSet().add(CHATROOM_LIST_KEY, chatroomId);
-    redisTemplate.opsForSet().add(CHATROOM_PREFIX + chatroomId, userId);
-  }
-
-  public void removeUserFromChatroom(String userId, String chatroomId) {
-    redisTemplate.opsForSet().remove(CHATROOM_PREFIX + chatroomId, userId);
-    if (redisTemplate.opsForSet().size(CHATROOM_PREFIX + chatroomId) == 0) {
-      redisTemplate.opsForSet().remove(CHATROOM_LIST_KEY, chatroomId);
-    }
-  }
-
-  public List<String> getChatroomConnectedClients(String chatroomId) {
-    return List.copyOf(redisTemplate.opsForSet().members(CHATROOM_PREFIX + chatroomId));
+  public Set<String> getChatroomConnectedClients(String chatroomId) {
+    return chatrooms.get(chatroomId);
   }
 
   public boolean isUserConnected(String userId) {
-    return redisTemplate.opsForSet().isMember(USER_LIST_KEY, userId);
+    System.out.println(connectedUsers);
+    return connectedUsers.contains(userId);
   }
 
   public boolean isChatroomPresent(String chatroomId) {
-    return redisTemplate.opsForSet().isMember(CHATROOM_LIST_KEY, chatroomId);
+    return chatrooms.containsKey(chatroomId);
   }
 }
