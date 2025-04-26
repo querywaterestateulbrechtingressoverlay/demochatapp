@@ -10,6 +10,12 @@ services:
       placement:
         constraints:
           - node.role == manager
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet --username user --password password
+      start_period: 15s
+      interval: 5s
+      timeout: 10s
+      retries: 10
 
   redis:
     image: redis:latest
@@ -21,8 +27,13 @@ services:
       placement:
         constraints:
           - node.role == worker
-    expose:
-     - 6379
+    healthcheck:
+      test: [ "CMD", "redis-cli", "--user", "coolusername123", "--pass", "coolpassword123", "ping" ]
+      start_period: 15s
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
   kafka:
     image: apache/kafka:latest
     environment:
@@ -38,21 +49,28 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_NUM_PARTITIONS: 1
-    expose:
-     - 9092
     deploy:
       placement:
         constraints:
-          - node.role == worker
+          - node.role == manager
+    healthcheck:
+      test: nc -z localhost 9092 || exit -1
+      start_period: 15s
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
   frontend:
     build: ./frontend/
     image: 127.0.0.1:5000/frontend
     ports:
      - 80:80
+    restart: always
     deploy:
       placement:
         constraints:
           - node.role == manager
+
   chatapp:
     build: .
     image: 127.0.0.1:5000/chatapp
@@ -60,11 +78,9 @@ services:
      - KAFKA_HOST=kafka:9092
      - REDIS_HOST=redis
      - MONGO_HOST=mongo
+    restart: always
     deploy:
       replicas: 2
       placement:
         constraints:
           - node.role == worker
-    expose:
-     - 8080
-     - 5005

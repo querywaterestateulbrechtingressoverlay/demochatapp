@@ -64,9 +64,7 @@ public class WebSocketUserManagerService {
       .getChatroomsByUser(userId)
       .stream()
       .map(Chatroom::id)
-      .forEach((chatroomId) -> {
-        removeUserFromChatroom(chatroomId, userId);
-      });
+      .forEach((chatroomId) -> removeUserFromChatroom(chatroomId, userId));
     logger.info("user " + userId + " has disconnected");
     connectedUsers.remove(userId);
   }
