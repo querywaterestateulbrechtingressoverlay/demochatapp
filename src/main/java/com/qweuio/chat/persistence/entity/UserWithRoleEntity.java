@@ -2,6 +2,9 @@ package com.qweuio.chat.persistence.entity;
 
 public record UserWithRoleEntity(
   String userId,
-  String role
+  UserRole role
 ) {
+  public enum UserRole {
+    NOT_A_MEMBER, MEMBER, ADMIN
+  }
 }

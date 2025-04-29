@@ -13,10 +13,26 @@ public interface ChatroomRepository extends MongoRepository<Chatroom, String> {
   @Aggregation({
     "{ $match : { '_id' : '?0' } }",
     "{ $unwind : '$users' }",
-    "{ $match : { 'users.userId' : '?1' } }",
-    "{ $project : { _id: 0, userId: '$users.userId', role: '$users.role' } }"
+    """
+    { $facet: {
+        user_match: [
+          { $match: { users.userId': '?1' } },
+          { $project: { users: { role: '$users.role' } } }
+        ],
+        not_found: [
+          { $project: {  _id: 0, users: { role: 'NOT_A_MEMBER' } } }
+        ]
+      }
+    }""",
+    """
+    { $project: { result: { $cond: {
+      if: { $eq: [ { $size: "$user_match" }, 1 ] },
+      then: { $arrayElemAt: [ "$user_match", 0 ] },
+      else: { $arrayElemAt: [ "$not_found", 0 ] }
+    } } } }""",
+    "{ $replaceRoot: { newRoot: '$result.users' } }"
   })
-  Optional<UserWithRoleEntity> getUserRoleFromChatroomById(String chatroomId, String userId);
+  UserWithRoleEntity.UserRole getUserRole(String chatroomId, String userId);
   @Aggregation({
     "{ $match: { $expr: { $eq: ['$_id', { $toObjectId: '?0' }] } } }",
     "{ $unwind: '$users' }",
@@ -37,4 +53,5 @@ public interface ChatroomRepository extends MongoRepository<Chatroom, String> {
     "{ $project: { count: { $size: '$users' }, _id: 0 } }"
   })
   Optional<Integer> getUserCount(String chatroomId);
+  void modifyUserRole(String chatroomId, String userId, UserWithRoleEntity.UserRole newRole);
 }

@@ -1,12 +1,13 @@
 package com.qweuio.chat.websocket;
 
-import com.qweuio.chat.core.MongoChatMessagingService;
+import com.qweuio.chat.core.UserChatService;
 import com.qweuio.chat.core.exception.*;
 import com.qweuio.chat.persistence.entity.ChatMessage;
 import com.qweuio.chat.persistence.entity.ChatUser;
 import com.qweuio.chat.persistence.entity.Chatroom;
 import com.qweuio.chat.websocket.dto.*;
 import com.qweuio.chat.websocket.dto.inbound.MessageHistoryRequestDTO;
+import com.qweuio.chat.websocket.dto.outbound.ErrorDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +15,7 @@ import org.springframework.messaging.handler.annotation.*;
 import org.springframework.stereotype.Controller;
 
 import java.security.Principal;
+import java.time.Instant;
 import java.util.*;
 
 @Controller
@@ -21,13 +23,13 @@ import java.util.*;
 public class ChatMessagingController {
   Logger logger = LoggerFactory.getLogger(ChatMessagingController.class);
   @Autowired
-  MongoChatMessagingService chatService;
+  UserChatService chatService;
   @Autowired
   KafkaMessageSenderService senderService;
 
   @MessageExceptionHandler({UserActionException.class})
-  void userActionException(UserActionException exception) {
-    logger.debug(exception.getMessage());
+  void userActionException(Principal principal, UserActionException exception) {
+    senderService.sendErrorMessage(new ErrorDTO(principal.getName(), Instant.now(), exception.getMessage()));
   }
 
   @MessageMapping("/getAvailableChatrooms")
@@ -41,7 +43,7 @@ public class ChatMessagingController {
                           @DestinationVariable String chatroomId,
                           Principal principal) {
     logger.info("send message, user {}", principal.getName());
-    ChatMessage processedMessage = chatService.sendMessage(principal.getName(), chatroomId, message);
+    ChatMessage processedMessage = chatService.saveMessage(principal.getName(), chatroomId, message);
     senderService.sendMessage(processedMessage, chatroomId);
   }
 
