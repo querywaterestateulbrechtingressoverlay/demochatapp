@@ -12,13 +12,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Map;
 
 import static com.qweuio.chat.websocket.dto.outbound.UserListUpdateDTO.Operation.ADD;
 
@@ -33,6 +31,8 @@ public class KafkaMessageSenderService {
   private String chatroomListTopic;
   @Value("${chatapp.kafka.error-topic}")
   private String errorTopic;
+
+  private final String messageHistoryDest = "/chatrooms/messages";
 
   @Autowired
   KafkaTemplate<String, Object> kafkaMessageTemplate;
@@ -67,10 +67,6 @@ public class KafkaMessageSenderService {
   public void addUserToChatroom(String chatroomId, List<UserShortInfoDTO> users) {
     var chatroomUsers = chatroomRepo.getUsersByChatroom(chatroomId).stream().map(ChatUser::id).toList();
     kafkaMessageTemplate.send(userListTopic, new UserListUpdateDTO(chatroomUsers, chatroomId, users, ADD));
-  }
-
-  public void addUserToChatroom(String chatroomId, String userId, List<UserShortInfoDTO> users) {
-    kafkaMessageTemplate.send(userListTopic, new UserListUpdateDTO(List.of(userId), chatroomId, users, ADD));
   }
 
   public void removeUserFromChatroom(String chatroomId, String userId) {

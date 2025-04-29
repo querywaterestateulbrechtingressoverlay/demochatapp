@@ -1,30 +1,19 @@
 package com.qweuio.chat.core;
 
-import com.mongodb.client.result.UpdateResult;
 import com.qweuio.chat.core.exception.*;
 import com.qweuio.chat.core.exception.chatapp.*;
-import com.qweuio.chat.persistence.MessagePersistingService;
 import com.qweuio.chat.persistence.entity.ChatMessage;
 import com.qweuio.chat.persistence.entity.ChatUser;
 import com.qweuio.chat.persistence.entity.Chatroom;
 import com.qweuio.chat.persistence.entity.UserWithRoleEntity;
-import com.qweuio.chat.persistence.repository.ChatUserRepository;
-import com.qweuio.chat.persistence.repository.ChatroomRepository;
 import com.qweuio.chat.websocket.dto.MessageRequestDTO;
 import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 @Service

@@ -16,8 +16,8 @@ import org.springframework.stereotype.Service;
 import java.util.Map;
 
 @Service
-public class KafkaUpdateReceiver {
-  Logger logger = LoggerFactory.getLogger(KafkaUpdateReceiver.class);
+public class KafkaMessageReceiver {
+  Logger logger = LoggerFactory.getLogger(KafkaMessageReceiver.class);
   String messageDest = "/messages";
   String messageHistoryDest = "/chatrooms/messages";
   String chatroomListUpdateDest = "/chatrooms";
