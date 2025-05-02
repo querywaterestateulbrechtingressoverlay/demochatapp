@@ -7,12 +7,6 @@ plugins {
 group = "com.qweuio"
 version = "0.0.1-SNAPSHOT"
 
-//java {
-//	toolchain {
-//		languageVersion = JavaLanguageVersion.of(23)
-//	}
-//}
-
 repositories {
 	mavenCentral()
 }
@@ -29,6 +23,12 @@ dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-websocket")
 	implementation("org.springframework.boot:spring-boot-starter-security")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
+
+	testImplementation("org.testcontainers:junit-jupiter")
+	testImplementation("com.redis:testcontainers-redis")
+	testImplementation("org.testcontainers:mongodb")
+	testImplementation("org.testcontainers:kafka")
+
 	testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
