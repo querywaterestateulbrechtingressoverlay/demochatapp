@@ -6,5 +6,5 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.List;
 
 public interface ChatMessageRepository extends MongoRepository<ChatMessage, Integer> {
-  List<ChatMessage> findTop10ByChatroomId(String chatroomId);
+  List<ChatMessage> findTopNByChatroomId(String chatroomId, int n);
 }

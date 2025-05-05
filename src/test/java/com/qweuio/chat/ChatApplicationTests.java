@@ -1,8 +1,8 @@
-package com.qweuio.chat;
-
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
-
-@SpringBootTest
-class ChatApplicationTests {
-}
+//package com.qweuio.chat;
+//
+//import org.junit.jupiter.api.Test;
+//import org.springframework.boot.test.context.SpringBootTest;
+//
+//@SpringBootTest
+//class ChatApplicationTests {
+//}

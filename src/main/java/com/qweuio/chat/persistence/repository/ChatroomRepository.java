@@ -53,5 +53,5 @@ public interface ChatroomRepository extends MongoRepository<Chatroom, String> {
     "{ $project: { count: { $size: '$users' }, _id: 0 } }"
   })
   Optional<Integer> getUserCount(String chatroomId);
-  void modifyUserRole(String chatroomId, String userId, UserWithRoleEntity.UserRole newRole);
+//  void modifyUserRole(String chatroomId, String userId, UserWithRoleEntity.UserRole newRole);
 }
