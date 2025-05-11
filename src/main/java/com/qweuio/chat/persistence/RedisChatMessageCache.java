@@ -64,7 +64,7 @@ public class RedisChatMessageCache {
   }
 
   public void removeOrphanedCache(String chatroomId) {
-    chatKeyIndexTemplate.opsForSet().remove(CACHED_CHATROOMS, CHATROOM_PREFIX + chatroomId);
+    chatKeyIndexTemplate.opsForSet().remove(CACHED_CHATROOMS, chatroomId);
   }
 
   public void cacheMessage(ChatMessage message) {

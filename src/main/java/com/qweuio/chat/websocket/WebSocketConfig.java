@@ -52,7 +52,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
           String authHeader = null;
           List<String> ah = accessor.getNativeHeader("Authorization");
           if (ah != null) {
-            authHeader = ah.getFirst();
+            authHeader = ah.get(0);
           }
           Jwt token = jwtDecoder.decode(authHeader);
           OAuth2TokenValidatorResult validatorResult = JwtValidators.createDefault().validate(token);

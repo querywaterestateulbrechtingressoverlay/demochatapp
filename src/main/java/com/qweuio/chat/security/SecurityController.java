@@ -63,7 +63,7 @@ public class SecurityController {
         .build());
       return ResponseEntity.ok("registration successful");
     } else {
-      return new ResponseEntity<>("user with provided username already exists", HttpStatus.BAD_REQUEST);
+      return new ResponseEntity<>("user with the provided username already exists", HttpStatus.BAD_REQUEST);
     }
   }
 }
