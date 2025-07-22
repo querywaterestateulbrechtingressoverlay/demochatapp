@@ -9,7 +9,9 @@ import com.qweuio.chat.websocket.dto.outbound.UserListUpdateDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.annotation.KafkaHandler;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.TopicPartition;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
@@ -30,12 +32,15 @@ public class KafkaMessageReceiver {
   @Autowired
   WebSocketUserManagerService userManagerService;
 
-  @KafkaListener(id = "errorSender", topics = {"${chatapp.kafka.error-topic}"})
-  void receiveErrorMEssage(ErrorDTO errorDTO) {
+  @KafkaListener(id = "errorHandler", topicPartitions = {
+    @TopicPartition(topic = "${chatapp.kafka.message-topic}", partitions = "${chatapp.kafka.update-topic-partition.error}") })
+  void receiveErrorMessage(ErrorDTO errorDTO) {
     template.convertAndSendToUser(errorDTO.recipientId(), errorDest, errorDTO);
   }
 
-  @KafkaListener(id = "messageSender", topics = {"${chatapp.kafka.message-topic}"})
+  @KafkaListener(id = "messageHandler", topicPartitions = {
+    @TopicPartition(topic = "${chatapp.kafka.message-topic}", partitions = "${chatapp.kafka.update-topic-partition.message}")
+  })
   void receiveMessage(MessageDTO message) {
     logger.info("received message " + message.toString());
     var messageRecipients = userManagerService.getChatroomConnectedClients(message.chatroom());
@@ -45,7 +50,9 @@ public class KafkaMessageReceiver {
     }
   }
 
-  @KafkaListener(id = "chatroomListUpdater", topics = {"${chatapp.kafka.chatroom-list-update-topic}"})
+  @KafkaListener(id = "chatroomListUpdateHandler", topicPartitions = {
+    @TopicPartition(topic = "${chatapp.kafka.message-topic}", partitions = "${chatapp.kafka.update-topic-partition.chatroom-list}")
+  })
   public void receiveChatroomListUpdate(ChatroomListUpdateDTO chatroomListUpdate) {
     logger.info("received a chatroom update " + chatroomListUpdate.toString());
     if (userManagerService.isUserConnected(chatroomListUpdate.recipientId())) {
@@ -63,7 +70,9 @@ public class KafkaMessageReceiver {
     }
   }
 
-  @KafkaListener(id = "userListUpdater", topics = {"${chatapp.kafka.user-list-update-topic}"})
+  @KafkaListener(id = "chatroomListUpdateHandler", topicPartitions = {
+    @TopicPartition(topic = "${chatapp.kafka.message-topic}", partitions = "${chatapp.kafka.update-topic-partition.chatroom-user-list}")
+  })
   void receiveUserListUpdate(UserListUpdateDTO userListUpdate) {
     logger.info("received a user list update " + userListUpdate.toString());
     if (userManagerService.isChatroomPresent(userListUpdate.chatroomId())) {

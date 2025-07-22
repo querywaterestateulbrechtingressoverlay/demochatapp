@@ -16,21 +16,19 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
 public class RedisConfig {
-  @Value("${chatapp.redis.host}")
-  private String redisHost;
-  @Value("${chatapp.redis.username}")
-  private String redisUsername;
-  @Value("${chatapp.redis.password}")
-  private String redisPassword;
-
-  @Bean
-  public RedisConnectionFactory connFactory() {
-    var redisConfig = new RedisStandaloneConfiguration();
-    redisConfig.setHostName(redisHost);
-    redisConfig.setUsername(redisUsername);
-    redisConfig.setPassword(redisPassword);
-    return new LettuceConnectionFactory(redisConfig);
-  }
+//  @Value("${chatapp.redis.host}")
+//  private String redisHost;
+//  @Value("${chatapp.redis.password}")
+//  private String redisPassword;
+//
+//  @Bean
+//  public RedisConnectionFactory connFactory() {
+//    var redisConfig = new RedisStandaloneConfiguration();
+//    redisConfig.setHostName(redisHost);
+//    redisConfig.setUsername(redisUsername);
+//    redisConfig.setPassword(redisPassword);
+//    return new LettuceConnectionFactory(redisConfig);
+//  }
   @Bean
   public RedisTemplate<String, ChatMessage> redisTemplate(RedisConnectionFactory connectionFactory) {
     RedisTemplate<String, ChatMessage> template = new RedisTemplate<>();

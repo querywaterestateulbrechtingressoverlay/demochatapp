@@ -21,12 +21,8 @@ import java.util.Map;
 public class KafkaConfiguration {
   @Value("${chatapp.kafka.host}")
   String kafkaHost;
-  @Value("${chatapp.kafka.message-topic}")
-  String sendMsgTopic;
-  @Value("${chatapp.kafka.user-list-update-topic}")
-  String userListUpdateTopic;
-  @Value("${chatapp.kafka.chatroom-list-update-topic}")
-  String chatroomListUpdateTopic;
+  @Value("${chatapp.kafka.update-topic}")
+  String updateTopic;
   @Bean
   public KafkaAdmin admin() {
     Map<String, Object> properties = new HashMap<>();
@@ -53,18 +49,8 @@ public class KafkaConfiguration {
   }
 
   @Bean
-  public NewTopic sendMsgTopic() {
-    return TopicBuilder.name(sendMsgTopic)
-      .build();
-  }
-  @Bean
-  public NewTopic userListUpdateTopic() {
-    return TopicBuilder.name(userListUpdateTopic)
-      .build();
-  }
-  @Bean
-  public NewTopic chatroomListUpdateTopic() {
-    return TopicBuilder.name(chatroomListUpdateTopic)
+  public NewTopic updateTopic() {
+    return TopicBuilder.name(updateTopic)
       .build();
   }
 }
