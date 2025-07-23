@@ -19,6 +19,21 @@ spec:
         image: chat-app:latest
         ports:
         - containerPort: 8080
+        envFrom:
+        - configMapRef:
+            name: chat-variables
+        env:
+        - name: DB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: chat-app-secrets
+              key: mongo-user
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: chat-app-secrets
+              key: mongo-password
+              
       - name: redis
         image: redis:latest
         ports:
@@ -35,3 +50,29 @@ spec:
   - protocol: TCP
     port: 80
     targetPort: 8080
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chat-variables
+data:
+  DB_HOST: mongo-service
+  DB_PORT: 27017
+  DB_DATABASE: test
+
+  REDIS_HOST: localhost
+  REDIS_PORT: 6379
+  REDIS_DATABASE: 0
+
+  KAFKA_HOST: kafka-service
+  KAFKA_UPDATE_TOPIC: chat-updates
+  KAFKA_MESSAGE_PARTITION: 0
+  KAFKA_ERROR_PARTITION: 1
+  KAFKA_CHATROOM_PARTITION: 2
+  KAFKA_USER_LIST_PARTITION: 3
+
+  MESSAGE_DESTINATION: message
+  MESSAGE_HISTORY_DESTINATION: message-history 
+  ERROR_DESTINATION: error
+  CHATROOM_DESTINATION: chatroom
+  CHATROOM_USERS_DESTINATION: chat-users
