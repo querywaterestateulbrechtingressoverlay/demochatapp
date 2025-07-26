@@ -51,6 +51,7 @@ public class KafkaConfiguration {
   @Bean
   public NewTopic updateTopic() {
     return TopicBuilder.name(updateTopic)
+      .partitions(4)
       .build();
   }
 }

@@ -33,13 +33,13 @@ public class KafkaMessageReceiver {
   WebSocketUserManagerService userManagerService;
 
   @KafkaListener(id = "errorHandler", topicPartitions = {
-    @TopicPartition(topic = "${chatapp.kafka.message-topic}", partitions = "${chatapp.kafka.update-topic-partition.error}") })
+    @TopicPartition(topic = "${chatapp.kafka.update-topic}", partitions = "${chatapp.kafka.update-topic-partition.error}") })
   void receiveErrorMessage(ErrorDTO errorDTO) {
     template.convertAndSendToUser(errorDTO.recipientId(), errorDest, errorDTO);
   }
 
   @KafkaListener(id = "messageHandler", topicPartitions = {
-    @TopicPartition(topic = "${chatapp.kafka.message-topic}", partitions = "${chatapp.kafka.update-topic-partition.message}")
+    @TopicPartition(topic = "${chatapp.kafka.update-topic}", partitions = "${chatapp.kafka.update-topic-partition.message}")
   })
   void receiveMessage(MessageDTO message) {
     logger.info("received message " + message.toString());
@@ -51,7 +51,7 @@ public class KafkaMessageReceiver {
   }
 
   @KafkaListener(id = "chatroomListUpdateHandler", topicPartitions = {
-    @TopicPartition(topic = "${chatapp.kafka.message-topic}", partitions = "${chatapp.kafka.update-topic-partition.chatroom-list}")
+    @TopicPartition(topic = "${chatapp.kafka.update-topic}", partitions = "${chatapp.kafka.update-topic-partition.chatroom-list}")
   })
   public void receiveChatroomListUpdate(ChatroomListUpdateDTO chatroomListUpdate) {
     logger.info("received a chatroom update " + chatroomListUpdate.toString());
@@ -70,8 +70,8 @@ public class KafkaMessageReceiver {
     }
   }
 
-  @KafkaListener(id = "chatroomListUpdateHandler", topicPartitions = {
-    @TopicPartition(topic = "${chatapp.kafka.message-topic}", partitions = "${chatapp.kafka.update-topic-partition.chatroom-user-list}")
+  @KafkaListener(id = "chatroomUserListUpdateHandler", topicPartitions = {
+    @TopicPartition(topic = "${chatapp.kafka.update-topic}", partitions = "${chatapp.kafka.update-topic-partition.chatroom-user-list}")
   })
   void receiveUserListUpdate(UserListUpdateDTO userListUpdate) {
     logger.info("received a user list update " + userListUpdate.toString());

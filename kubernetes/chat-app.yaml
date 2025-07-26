@@ -16,7 +16,8 @@ spec:
     spec:
       containers:
       - name: chat-app
-        image: chat-app:latest
+        image: localhost:5000/chat-app:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         envFrom:
@@ -33,9 +34,20 @@ spec:
             secretKeyRef:
               name: chat-app-secrets
               key: mongo-password
-              
+        - name: JWT_RSA_PRIVATE
+          valueFrom:
+            secretKeyRef:
+              name: chat-app-jwt-keys
+              key: private
+        - name: JWT_RSA_PUBLIC
+          valueFrom:
+            secretKeyRef:
+              name: chat-app-jwt-keys
+              key: public
+
       - name: redis
         image: redis:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 6379
 ---
@@ -57,19 +69,19 @@ metadata:
   name: chat-variables
 data:
   DB_HOST: mongo-service
-  DB_PORT: 27017
+  DB_PORT: '27017'
   DB_DATABASE: test
 
   REDIS_HOST: localhost
-  REDIS_PORT: 6379
-  REDIS_DATABASE: 0
+  REDIS_PORT: '6379'
+  REDIS_DATABASE: '0'
 
-  KAFKA_HOST: kafka-service
+  KAFKA_HOST: kafka-service:9092
   KAFKA_UPDATE_TOPIC: chat-updates
-  KAFKA_MESSAGE_PARTITION: 0
-  KAFKA_ERROR_PARTITION: 1
-  KAFKA_CHATROOM_PARTITION: 2
-  KAFKA_USER_LIST_PARTITION: 3
+  KAFKA_MESSAGE_PARTITION: '0'
+  KAFKA_ERROR_PARTITION: '1'
+  KAFKA_CHATROOM_PARTITION: '2'
+  KAFKA_USER_LIST_PARTITION: '3'
 
   MESSAGE_DESTINATION: message
   MESSAGE_HISTORY_DESTINATION: message-history 
