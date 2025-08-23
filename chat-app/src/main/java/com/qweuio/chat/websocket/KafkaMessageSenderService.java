@@ -25,6 +25,14 @@ public class KafkaMessageSenderService {
   Logger logger = LoggerFactory.getLogger(KafkaMessageSenderService.class);
   @Value("${chatapp.kafka.update-topic}")
   private String updateTopic;
+  @Value("${chatapp.kafka.update-topic-partition.error}")
+  private int errorPartition;
+  @Value("${chatapp.kafka.update-topic-partition.message}")
+  private int messagePartition;
+  @Value("${chatapp.kafka.update-topic-partition.chatroom-list}")
+  private int chatroomListPartition;
+  @Value("${chatapp.kafka.update-topic-partition.chatroom-user-list}")
+  private int chatroomUserListPartition;
 
   private final String messageHistoryDest = "/chatrooms/messages";
 
@@ -38,12 +46,13 @@ public class KafkaMessageSenderService {
   ChatroomRepository chatroomRepo;
 
   public void sendErrorMessage(ErrorDTO errorDTO) {
-    kafkaMessageTemplate.send(updateTopic, errorDTO);
+    logger.info("error " + errorDTO.toString());
+    kafkaMessageTemplate.send(updateTopic, errorPartition, null, errorDTO);
   }
 
   public void sendMessage(ChatMessage message, String chatroomId) {
-    logger.info("sending message " + message + " to chatroom " + chatroomId);
-    kafkaMessageTemplate.send(updateTopic, new MessageDTO(message.id(), message.senderId(), message.chatroomId(), message.sentAt(), message.contents()));
+    logger.info("sending message {} to chatroom {}", message, chatroomId);
+    kafkaMessageTemplate.send(updateTopic, messagePartition, null, new MessageDTO(message.id(), message.senderId(), message.chatroomId(), message.sentAt(), message.contents()));
   }
 
   public void updateMessageHistory(String userId, String chatroomId, List<ChatMessage> history) {
@@ -51,20 +60,20 @@ public class KafkaMessageSenderService {
   }
 
   public void addChatroomToUser(String userId, ChatroomListDTO list) {
-    kafkaMessageTemplate.send(updateTopic, new ChatroomListUpdateDTO(userId, list.chatrooms(), ChatroomListUpdateDTO.Operation.ADD));
+    kafkaMessageTemplate.send(updateTopic, chatroomListPartition, null, new ChatroomListUpdateDTO(userId, list.chatrooms(), ChatroomListUpdateDTO.Operation.ADD));
   }
 
   public void removeChatroomFromUser(String userId, String chatroomId) {
-    kafkaMessageTemplate.send(updateTopic, new ChatroomListUpdateDTO(userId, List.of(new ChatroomShortInfoDTO(chatroomId, null)), ChatroomListUpdateDTO.Operation.REMOVE));
+    kafkaMessageTemplate.send(updateTopic, chatroomListPartition, null, new ChatroomListUpdateDTO(userId, List.of(new ChatroomShortInfoDTO(chatroomId, null)), ChatroomListUpdateDTO.Operation.REMOVE));
   }
 
   public void addUserToChatroom(String chatroomId, List<UserShortInfoDTO> users) {
     var chatroomUsers = chatroomRepo.getUsersByChatroom(chatroomId).stream().map(ChatUser::id).toList();
-    kafkaMessageTemplate.send(updateTopic, new UserListUpdateDTO(chatroomUsers, chatroomId, users, ADD));
+    kafkaMessageTemplate.send(updateTopic, chatroomUserListPartition, null, new UserListUpdateDTO(chatroomUsers, chatroomId, users, ADD));
   }
 
   public void removeUserFromChatroom(String chatroomId, String userId) {
     var chatroomUsers = chatroomRepo.getUsersByChatroom(chatroomId).stream().map(ChatUser::id).toList();
-    kafkaMessageTemplate.send(updateTopic, new UserListUpdateDTO(chatroomUsers, chatroomId, List.of(new UserShortInfoDTO(userId, null)), UserListUpdateDTO.Operation.REMOVE));
+    kafkaMessageTemplate.send(updateTopic, chatroomUserListPartition, null, new UserListUpdateDTO(chatroomUsers, chatroomId, List.of(new UserShortInfoDTO(userId, null)), UserListUpdateDTO.Operation.REMOVE));
   }
 }

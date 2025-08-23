@@ -42,7 +42,7 @@ public class ChatMessagingController {
   public void sendMessage(@Payload MessageRequestDTO message,
                           @DestinationVariable String chatroomId,
                           Principal principal) {
-    logger.info("send message, user {}", principal.getName());
+    logger.info("send message, user {}, chatroom {}", principal.getName(), chatroomId);
     ChatMessage processedMessage = chatService.saveMessage(principal.getName(), chatroomId, message);
     senderService.sendMessage(processedMessage, chatroomId);
   }

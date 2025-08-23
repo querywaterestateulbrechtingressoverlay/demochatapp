@@ -34,7 +34,9 @@ public class ChatService {
   protected MongoTemplate mongoTemplate;
 
   public UserWithRoleEntity.UserRole getUserRole(String chatroomId, String userId) {
+    logger.info("chatroom id {} user id {}", chatroomId, userId);
     if (!chatroomRepo.existsById(chatroomId)) throw new ChatroomNotFoundException(chatroomId);
+    logger.info("user found in chatroom");
     return chatroomRepo.getUserRole(chatroomId, userId);
   }
 

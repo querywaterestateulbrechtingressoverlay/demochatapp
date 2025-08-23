@@ -16,7 +16,7 @@ public interface ChatroomRepository extends MongoRepository<Chatroom, String> {
     """
     { $facet: {
         user_match: [
-          { $match: { users.userId': '?1' } },
+          { $match: { "users.userId": '?1' } },
           { $project: { users: { role: '$users.role' } } }
         ],
         not_found: [

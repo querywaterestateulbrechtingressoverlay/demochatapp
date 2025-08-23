@@ -14,8 +14,14 @@ public interface ChatUserRepository extends MongoRepository<ChatUser, String> {
 
   @Aggregation({
     "{ $match: { '_id': ?0 } }",
-    "{ $unwind: '$chatrooms' }",
-    """
+    "{ $unwind: '$chatrooms' }", """
+    {
+      $addFields: {
+        "chatrooms": {
+          "$toObjectId": "$chatrooms"
+        }
+      }
+    }""", """
     { $lookup: {
       from: 'chatrooms',
       localField: 'chatrooms',

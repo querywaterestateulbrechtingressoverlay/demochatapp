@@ -23,6 +23,7 @@ public class MessagePersistingService {
 
   public ChatMessage persistMessage(MessageDTO message) {
     ChatMessage messageEntity = persistMessageInDB(message);
+    logger.info(messageEntity.toString());
     redisChatMessageCache.cacheMessage(messageEntity);
     return messageEntity;
   }

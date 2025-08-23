@@ -69,7 +69,7 @@ public class WebSocketUserManagerService {
   }
 
   public Set<String> getChatroomConnectedClients(String chatroomId) {
-    return chatrooms.get(chatroomId);
+    return chatrooms.getOrDefault(chatroomId, Collections.emptySet());
   }
 
   public boolean isUserConnected(String userId) {

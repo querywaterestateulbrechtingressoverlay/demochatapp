@@ -14,22 +14,35 @@ spec:
       labels:
         app: mongo
     spec:
+      volumes:
+      - name: init-config-volume
+        configMap:
+          name: mongo-config
+          items:
+            - key: init-script
+              path: init.sh
       containers:
       - name: mongo
         image: mongo:latest
         ports:
         - containerPort: 9092
+        volumeMounts:
+        - name: init-config-volume
+          mountPath: /docker-entrypoint-initdb.d
         env:
-        - name: MONGO_INITDB_ROOT_USERNAME
+        - name: MONGO_INITDB_DATABASE
+          value: database
+        - name: MONGO_USERNAME
           valueFrom:
             secretKeyRef:
               name: chat-app-secrets
               key: mongo-user
-        - name: MONGO_INITDB_ROOT_PASSWORD
+        - name: MONGO_PASSWORD
           valueFrom:
             secretKeyRef:
               name: chat-app-secrets
               key: mongo-password
+      
 ---
 apiVersion: v1
 kind: Service
@@ -42,3 +55,12 @@ spec:
   - protocol: TCP
     port: 27017
     targetPort: 27017
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-config
+data: 
+  init-script: |-
+    #!/bin/bash
+    mongosh database --eval "db.createUser({user:\"$MONGO_USERNAME\",pwd:\"$MONGO_PASSWORD\",roles:[{role:\"readWrite\",db:\"test\"}]});"

@@ -5,7 +5,7 @@ metadata:
   labels:
     app: chat-app
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: chat-app
@@ -70,7 +70,7 @@ metadata:
 data:
   DB_HOST: mongo-service
   DB_PORT: '27017'
-  DB_DATABASE: test
+  DB_DATABASE: database
 
   REDIS_HOST: localhost
   REDIS_PORT: '6379'
