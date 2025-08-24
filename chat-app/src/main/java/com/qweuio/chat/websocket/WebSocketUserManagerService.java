@@ -49,7 +49,7 @@ public class WebSocketUserManagerService {
       .stream()
       .map(Chatroom::id)
       .toArray(String[]::new);
-    logger.info("user " + userId + " has connected");
+    logger.info("user {} has connected", userId);
     connectedUsers.add(userId);
     for (String chatroomId : connectedUserChatrooms) {
       addUserToChatroom(chatroomId, userId);
@@ -64,7 +64,7 @@ public class WebSocketUserManagerService {
       .stream()
       .map(Chatroom::id)
       .forEach((chatroomId) -> removeUserFromChatroom(chatroomId, userId));
-    logger.info("user " + userId + " has disconnected");
+    logger.info("user {} has disconnected", userId);
     connectedUsers.remove(userId);
   }
 

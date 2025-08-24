@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: mongo-instance
   labels:
@@ -24,9 +24,12 @@ spec:
       containers:
       - name: mongo
         image: mongo:latest
+        args: ["--dbpath","/data/db"]
         ports:
         - containerPort: 9092
         volumeMounts:
+        - name: data-volume
+          mountPath: /data/db
         - name: init-config-volume
           mountPath: /docker-entrypoint-initdb.d
         env:
@@ -42,7 +45,14 @@ spec:
             secretKeyRef:
               name: chat-app-secrets
               key: mongo-password
-      
+  volumeClaimTemplates:
+  - metadata:
+      name: data-volume
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 5Gi
 ---
 apiVersion: v1
 kind: Service
@@ -51,6 +61,7 @@ metadata:
 spec:
   selector:
     app: mongo
+  clusterIP: None
   ports:
   - protocol: TCP
     port: 27017
