@@ -1,6 +1,7 @@
 package com.qweuio.chat.persistence;
 
 import com.qweuio.chat.persistence.entity.ChatMessage;
+import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
@@ -41,7 +42,7 @@ class RedisChatMessageCacheTests {
 
   @Test
   void trimChatroomCacheOnOrphanedCache() {
-    String chatroomId = "room1";
+    ObjectId chatroomId = new ObjectId("abcdef");
     when(chatKeyIndexTemplate.hasKey("chatroom:room1")).thenReturn(false);
 
     redisChatMessageCache.trimChatroomCache(chatroomId);
@@ -52,7 +53,7 @@ class RedisChatMessageCacheTests {
 
   @Test
   void trimChatroomCache() {
-    String chatroomId = "room1";
+    ObjectId chatroomId = new ObjectId("abcdef");
     when(chatKeyIndexTemplate.hasKey("chatroom:room1")).thenReturn(true);
 
     redisChatMessageCache.trimChatroomCache(chatroomId);
@@ -64,19 +65,19 @@ class RedisChatMessageCacheTests {
   @Test
   void getMessagesFromCache() {
     List<ChatMessage> expectedMessages = List.of(
-      new ChatMessage("1", "user1", "room1", Instant.now(), "Hello")
+      new ChatMessage(new ObjectId("1"), new ObjectId("fedcba"), new ObjectId("abcdef"), Instant.now(), "Hello")
     );
     when(chatMessageCacheTemplate.opsForList().range("chatroom:room1", 0, 5))
       .thenReturn(expectedMessages);
 
-    List<ChatMessage> result = redisChatMessageCache.getMessagesFromCache("room1", 5);
+    List<ChatMessage> result = redisChatMessageCache.getMessagesFromCache(new ObjectId("abcdef"), 5);
 
     assertEquals(expectedMessages, result);
   }
 
   @Test
   void isCachePresentOnOrphanedCache() {
-    String chatroomId = "room1";
+    ObjectId chatroomId = new ObjectId("abcdef");
     when(chatKeyIndexTemplate.opsForSet().isMember("cachedchatrooms", chatroomId))
       .thenReturn(true);
     when(chatMessageCacheTemplate.opsForList().size("chatroom:room1")).thenReturn(0L);
@@ -89,7 +90,7 @@ class RedisChatMessageCacheTests {
 
   @Test
   void isCachePresentOnExistingCache() {
-    String chatroomId = "room1";
+    ObjectId chatroomId = new ObjectId("abcdef");
     when(chatKeyIndexTemplate.opsForSet().isMember("cachedchatrooms", chatroomId))
       .thenReturn(true);
     when(chatMessageCacheTemplate.opsForList().size("chatroom:room1")).thenReturn(1L);
@@ -101,7 +102,7 @@ class RedisChatMessageCacheTests {
 
   @Test
   void isChatroomPresentInCachedSet() {
-    String chatroomId = "room1";
+    ObjectId chatroomId = new ObjectId("abcdef");
     when(chatKeyIndexTemplate.opsForSet().isMember("cachedchatrooms", chatroomId))
       .thenReturn(true);
 
@@ -113,7 +114,7 @@ class RedisChatMessageCacheTests {
 
   @Test
   void isChatroomCachePresentCachePresent() {
-    String chatroomId = "room1";
+    ObjectId chatroomId = new ObjectId("abcdef");
     when(chatMessageCacheTemplate.opsForList().size("chatroom:room1")).thenReturn(1L);
 
     boolean result = redisChatMessageCache.isChatroomCachePresent(chatroomId);
@@ -122,7 +123,7 @@ class RedisChatMessageCacheTests {
   }
   @Test
   void isChatroomCachePresentCacheMissing() {
-    String chatroomId = "room1";
+    ObjectId chatroomId = new ObjectId("abcdef");
     when(chatMessageCacheTemplate.opsForList().size("chatroom:room1")).thenReturn(0L);
 
     boolean result = redisChatMessageCache.isChatroomCachePresent(chatroomId);
@@ -133,32 +134,32 @@ class RedisChatMessageCacheTests {
 
   @Test
   void removeOrphanedCache() {
-    redisChatMessageCache.removeOrphanedCache("room1");
+    redisChatMessageCache.removeOrphanedCache(new ObjectId("abcdef"));
 
-    verify(chatKeyIndexTemplate.opsForSet()).remove("cachedchatrooms", "room1");
+    verify(chatKeyIndexTemplate.opsForSet()).remove("cachedchatrooms", new ObjectId("abcdef"));
   }
 
   @Test
   public void cacheMessageWithoutExistingCache() throws Exception {
-    ChatMessage message = new ChatMessage("1", "user1", "room1", Instant.now(), "yo");
+    ChatMessage message = new ChatMessage(new ObjectId("1"), new ObjectId("fedcba"), new ObjectId("abcdef"), Instant.now(), "yo");
     when(chatMessageCacheTemplate.opsForList().leftPush(any(), any())).thenReturn(1L);
 
     redisChatMessageCache.cacheMessage(message);
 
     verify(chatMessageCacheTemplate.opsForList()).leftPush("chatroom:room1", message);
-    verify(chatKeyIndexTemplate.opsForSet()).add("cachedchatrooms", "room1");
+    verify(chatKeyIndexTemplate.opsForSet()).add("cachedchatrooms", new ObjectId("abcdef"));
     verify(chatMessageCacheTemplate).expire("chatroom:room1", Duration.ofMinutes(5));
   }
 
   @Test
   public void cacheMessageWithExistingCache() throws Exception {
-    ChatMessage message = new ChatMessage("1", "user1", "room1", Instant.now(), "yo");
+    ChatMessage message = new ChatMessage(new ObjectId("1"), new ObjectId("fedcba"), new ObjectId("abcdef"), Instant.now(), "yo");
     when(chatMessageCacheTemplate.opsForList().leftPush(any(), any())).thenReturn(2L);
 
     redisChatMessageCache.cacheMessage(message);
 
     verify(chatMessageCacheTemplate.opsForList()).leftPush("chatroom:room1", message);
-    verify(chatKeyIndexTemplate.opsForSet(), never()).add("cachedchatrooms", "room1");
+    verify(chatKeyIndexTemplate.opsForSet(), never()).add("cachedchatrooms", new ObjectId("abcdef"));
     verify(chatMessageCacheTemplate).expire("chatroom:room1", Duration.ofMinutes(5));
   }
 }

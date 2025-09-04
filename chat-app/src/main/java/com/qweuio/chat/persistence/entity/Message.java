@@ -1,16 +1,17 @@
 package com.qweuio.chat.persistence.entity;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.Instant;
+import java.util.UUID;
 
-@Document("messages")
+@Table("chat_messages")
 public record ChatMessage(
   @Id
-  String id,
-  String senderId,
-  String chatroomId,
+  UUID id,
+  UUID senderId,
+  UUID chatroomId,
   Instant sentAt,
   String contents
 ) {
