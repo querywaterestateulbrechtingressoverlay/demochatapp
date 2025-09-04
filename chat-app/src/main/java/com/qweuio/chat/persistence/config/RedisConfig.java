@@ -1,17 +1,13 @@
 package com.qweuio.chat.persistence.config;
 
-import com.fasterxml.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.qweuio.chat.persistence.entity.ChatMessage;
-import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
-import org.springframework.beans.factory.annotation.Value;
+import com.qweuio.chat.persistence.entity.Message;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
-import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
-import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson3JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
@@ -30,14 +26,14 @@ public class RedisConfig {
 //    return new LettuceConnectionFactory(redisConfig);
 //  }
   @Bean
-  public RedisTemplate<String, ChatMessage> redisTemplate(RedisConnectionFactory connectionFactory) {
-    RedisTemplate<String, ChatMessage> template = new RedisTemplate<>();
+  public RedisTemplate<String, Message> redisTemplate(RedisConnectionFactory connectionFactory) {
+    RedisTemplate<String, Message> template = new RedisTemplate<>();
     template.setConnectionFactory(connectionFactory);
     template.setKeySerializer(new StringRedisSerializer());
-    var valueSerializer = new Jackson2JsonRedisSerializer<ChatMessage>(JsonMapper.builder()
-            .addModule(new JavaTimeModule())
+    var valueSerializer = new Jackson3JsonRedisSerializer<>(JsonMapper.builder()
+//            .addModule(new JavaTimeModule())
             .findAndAddModules()
-            .build(), ChatMessage.class);
+            .build(), Message.class);
     template.setValueSerializer(valueSerializer);
     return template;
   }

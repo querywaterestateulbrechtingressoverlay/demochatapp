@@ -2,8 +2,8 @@ package com.qweuio.chat.websocket;
 
 import com.qweuio.chat.core.UserChatService;
 import com.qweuio.chat.core.exception.*;
-import com.qweuio.chat.persistence.entity.ChatMessage;
-import com.qweuio.chat.persistence.entity.ChatUser;
+import com.qweuio.chat.persistence.entity.Message;
+import com.qweuio.chat.persistence.entity.User;
 import com.qweuio.chat.persistence.entity.Chatroom;
 import com.qweuio.chat.websocket.dto.*;
 import com.qweuio.chat.websocket.dto.inbound.MessageHistoryRequestDTO;
@@ -29,58 +29,58 @@ public class ChatMessagingController {
 
   @MessageExceptionHandler({UserActionException.class})
   void userActionException(Principal principal, UserActionException exception) {
-    senderService.sendErrorMessage(new ErrorDTO(principal.getName(), Instant.now(), exception.getMessage()));
+    senderService.sendErrorMessage(new ErrorDTO(UUID.fromString(principal.getName()), Instant.now(), exception.getMessage()));
   }
 
   @MessageMapping("/getAvailableChatrooms")
   public void getChatrooms(@Headers Map<String, String> headers, Principal principal) {
-    logger.info("get av chatrooms, user {}", principal.getName());
-    senderService.addChatroomToUser(principal.getName(), Converters.toDTO(chatService.getUserChatrooms(principal.getName())));
+    logger.info("get av chatrooms, user {}", UUID.fromString(principal.getName()));
+    senderService.addChatroomToUser(UUID.fromString(principal.getName()), Converters.toDTO(chatService.getUserChatrooms(UUID.fromString(principal.getName()))));
   }
 
   @MessageMapping("/{chatroomId}/send")
   public void sendMessage(@Payload MessageRequestDTO message,
                           @DestinationVariable String chatroomId,
                           Principal principal) {
-    logger.info("send message, user {}, chatroom {}", principal.getName(), chatroomId);
-    ChatMessage processedMessage = chatService.saveMessage(principal.getName(), chatroomId, message);
-    senderService.sendMessage(processedMessage, chatroomId);
+    logger.info("send message, user {}, chatroom {}", UUID.fromString(principal.getName()), UUID.fromString(chatroomId));
+    Message processedMessage = chatService.saveMessage(UUID.fromString(principal.getName()), UUID.fromString(chatroomId), message);
+    senderService.sendMessage(processedMessage, UUID.fromString(chatroomId));
   }
 
   @MessageMapping("/{chatroomId}/getRecentHistory")
   public void getRecentHistory(@Payload MessageHistoryRequestDTO messageRequest,
                                @DestinationVariable String chatroomId,
                                Principal principal) {
-    List<ChatMessage> messages = chatService.getChatroomRecentHistory(principal.getName(), chatroomId);
-    senderService.updateMessageHistory(principal.getName(), chatroomId, messages);
+    List<Message> messages = chatService.getChatroomRecentHistory(UUID.fromString(principal.getName()), UUID.fromString(chatroomId));
+    senderService.updateMessageHistory(UUID.fromString(principal.getName()), UUID.fromString(chatroomId), messages);
   }
 
   @MessageMapping("/{chatroomId}/getUsers")
   public void getUsers(@DestinationVariable String chatroomId,
                        Principal principal) {
-    List<ChatUser> users = chatService.getChatroomUsers(principal.getName(), chatroomId);
-    senderService.addUserToChatroom(chatroomId, users.stream().map(Converters::toDTO).toList());
+    List<User> users = chatService.getChatroomUsers(UUID.fromString(principal.getName()), UUID.fromString(chatroomId));
+    senderService.addUserToChatroom(UUID.fromString(chatroomId), users.stream().map(Converters::toDTO).toList());
   }
 
   @MessageMapping("/create")
   void createChat(@Payload ChatroomNameDTO chatCreationRequest, Principal principal) {
-    Chatroom newChatroom = chatService.createChatroom(principal.getName(), chatCreationRequest.chatroomName());
-    senderService.addChatroomToUser(principal.getName(), Converters.toDTO(List.of(newChatroom)));
+    Chatroom newChatroom = chatService.createChatroom(UUID.fromString(principal.getName()), chatCreationRequest.chatroomName());
+    senderService.addChatroomToUser(UUID.fromString(principal.getName()), Converters.toDTO(List.of(newChatroom)));
   }
 
   @MessageMapping("/{chatroomId}/delete")
   void deleteChat(@DestinationVariable String chatroomId, Principal principal) {
-    List<ChatUser> users = chatService.getChatroomUsers(chatroomId);
-    chatService.deleteChatroom(principal.getName(), chatroomId);
-    users.forEach((cu) -> senderService.removeChatroomFromUser(cu.id(), chatroomId));
+    List<User> users = chatService.getChatroomUsers(UUID.fromString(chatroomId));
+    chatService.deleteChatroom(UUID.fromString(principal.getName()), UUID.fromString(chatroomId));
+    users.forEach((cu) -> senderService.removeChatroomFromUser(cu.id(), UUID.fromString(chatroomId)));
   }
 
   @MessageMapping("/{chatroomId}/invite")
   void inviteUserToChat(@Payload UserIdDTO userToInvite,
                         @DestinationVariable String chatroomId,
                         Principal principal) {
-    Chatroom chatroom = chatService.addUserToChatroom(principal.getName(), userToInvite.userId(), chatroomId);
-    senderService.addUserToChatroom(chatroomId, List.of(Converters.toDTO(chatService.getUserInfo(userToInvite.userId()))));
+    Chatroom chatroom = chatService.addUserToChatroom(UUID.fromString(principal.getName()), userToInvite.userId(), UUID.fromString(chatroomId));
+    senderService.addUserToChatroom(UUID.fromString(chatroomId), List.of(Converters.toDTO(chatService.getUserInfo(userToInvite.userId()))));
     senderService.addChatroomToUser(userToInvite.userId(), Converters.toDTO(List.of(chatroom)));
   }
 
@@ -88,8 +88,8 @@ public class ChatMessagingController {
   void kickUserFromChat(@Payload UserIdDTO userToKick,
                         @DestinationVariable String chatroomId,
                         Principal principal) {
-    chatService.removeUserFromChatroom(principal.getName(), userToKick.userId(), chatroomId);
-    senderService.removeUserFromChatroom(chatroomId, userToKick.userId());
-    senderService.removeChatroomFromUser(userToKick.userId(), chatroomId);
+    chatService.removeUserFromChatroom(UUID.fromString(principal.getName()), userToKick.userId(), UUID.fromString(chatroomId));
+    senderService.removeUserFromChatroom(UUID.fromString(chatroomId), userToKick.userId());
+    senderService.removeChatroomFromUser(userToKick.userId(), UUID.fromString(chatroomId));
   }
 }

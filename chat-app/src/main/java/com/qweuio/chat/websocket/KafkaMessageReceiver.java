@@ -16,6 +16,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class KafkaMessageReceiver {
@@ -35,7 +36,7 @@ public class KafkaMessageReceiver {
   @KafkaListener(id = "errorHandler", topicPartitions = {
     @TopicPartition(topic = "${chatapp.kafka.update-topic}", partitions = "${chatapp.kafka.update-topic-partition.error}") })
   void receiveErrorMessage(ErrorDTO errorDTO) {
-    template.convertAndSendToUser(errorDTO.recipientId(), errorDest, errorDTO);
+    template.convertAndSendToUser(errorDTO.recipientId().toString(), errorDest, errorDTO);
   }
 
   @KafkaListener(id = "messageHandler", topicPartitions = {
@@ -45,8 +46,8 @@ public class KafkaMessageReceiver {
     logger.info("received message " + message.toString());
     var messageRecipients = userManagerService.getChatroomConnectedClients(message.chatroom());
     logger.info("recipients: " + messageRecipients.toString());
-    for (String recipientId : messageRecipients) {
-      template.convertAndSendToUser(recipientId, messageDest, message);
+    for (UUID recipientId : messageRecipients) {
+      template.convertAndSendToUser(recipientId.toString(), messageDest, message);
     }
   }
 
@@ -57,7 +58,7 @@ public class KafkaMessageReceiver {
     logger.info("received a chatroom update " + chatroomListUpdate.toString());
     if (userManagerService.isUserConnected(chatroomListUpdate.recipientId())) {
       logger.info("user " + chatroomListUpdate.recipientId() + " is connected");
-      template.convertAndSendToUser(chatroomListUpdate.recipientId(), chatroomListUpdateDest, new ChatroomListDTO(chatroomListUpdate.chatrooms()));
+      template.convertAndSendToUser(chatroomListUpdate.recipientId().toString(), chatroomListUpdateDest, new ChatroomListDTO(chatroomListUpdate.chatrooms()));
       for (ChatroomShortInfoDTO chatroom : chatroomListUpdate.chatrooms()) {
         if (chatroomListUpdate.operation() == ChatroomListUpdateDTO.Operation.ADD) {
           userManagerService.addUserToChatroom(chatroom.id(), chatroomListUpdate.recipientId());
@@ -77,9 +78,9 @@ public class KafkaMessageReceiver {
     logger.info("received a user list update " + userListUpdate.toString());
     if (userManagerService.isChatroomPresent(userListUpdate.chatroomId())) {
       logger.info("connected users: " + userManagerService.getChatroomConnectedClients(userListUpdate.chatroomId()));
-      for (String userId : userManagerService.getChatroomConnectedClients(userListUpdate.chatroomId())) {
+      for (UUID userId : userManagerService.getChatroomConnectedClients(userListUpdate.chatroomId())) {
         logger.info("sending message to user " + userId);
-        template.convertAndSendToUser(userId, chatroomUserListUpdDest, userListUpdate.chatroomId(), Map.of("operation", userListUpdate.operation().name().toLowerCase()));
+        template.convertAndSendToUser(userId.toString(), chatroomUserListUpdDest, userListUpdate.chatroomId(), Map.of("operation", userListUpdate.operation().name().toLowerCase()));
       }
     }
   }

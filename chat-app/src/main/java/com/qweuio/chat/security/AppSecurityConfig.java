@@ -80,7 +80,7 @@ public class AppSecurityConfig {
   }
   @Bean
   UserDetailsManager uds() {
-    return new CustomUserDetailsService();
+    return new CustomUserDetailsManager();
   }
 
 }

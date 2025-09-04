@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chat-app-variables
+data:
+  db-database: postgres
+  db-root-user: rootuser
+  db-app-user: appuser

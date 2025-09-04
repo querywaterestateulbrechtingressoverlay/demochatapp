@@ -1,6 +1,6 @@
 package com.qweuio.chat.persistence;
 
-import com.qweuio.chat.persistence.entity.ChatMessage;
+import com.qweuio.chat.persistence.entity.Message;
 import org.bson.types.ObjectId;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,13 +22,13 @@ import static org.mockito.Mockito.*;
 @SpringBootTest(classes = {RedisChatMessageCache.class})
 @ExtendWith(MockitoExtension.class)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class RedisChatMessageCacheTests {
+class RedisMessageCacheTests {
   @MockitoBean
-  RedisTemplate<String, ChatMessage> chatMessageCacheTemplate;
+  RedisTemplate<String, Message> chatMessageCacheTemplate;
   @MockitoBean
   RedisTemplate<String, String> chatKeyIndexTemplate;
   @MockitoBean
-  ListOperations<String, ChatMessage> listOperations;
+  ListOperations<String, Message> listOperations;
   @MockitoBean
   SetOperations<String, String> setOperations;
   @Autowired
@@ -64,13 +64,13 @@ class RedisChatMessageCacheTests {
 
   @Test
   void getMessagesFromCache() {
-    List<ChatMessage> expectedMessages = List.of(
-      new ChatMessage(new ObjectId("1"), new ObjectId("fedcba"), new ObjectId("abcdef"), Instant.now(), "Hello")
+    List<Message> expectedMessages = List.of(
+      new Message(new ObjectId("1"), new ObjectId("fedcba"), new ObjectId("abcdef"), Instant.now(), "Hello")
     );
     when(chatMessageCacheTemplate.opsForList().range("chatroom:room1", 0, 5))
       .thenReturn(expectedMessages);
 
-    List<ChatMessage> result = redisChatMessageCache.getMessagesFromCache(new ObjectId("abcdef"), 5);
+    List<Message> result = redisChatMessageCache.getMessagesFromCache(new ObjectId("abcdef"), 5);
 
     assertEquals(expectedMessages, result);
   }
@@ -141,7 +141,7 @@ class RedisChatMessageCacheTests {
 
   @Test
   public void cacheMessageWithoutExistingCache() throws Exception {
-    ChatMessage message = new ChatMessage(new ObjectId("1"), new ObjectId("fedcba"), new ObjectId("abcdef"), Instant.now(), "yo");
+    Message message = new Message(new ObjectId("1"), new ObjectId("fedcba"), new ObjectId("abcdef"), Instant.now(), "yo");
     when(chatMessageCacheTemplate.opsForList().leftPush(any(), any())).thenReturn(1L);
 
     redisChatMessageCache.cacheMessage(message);
@@ -153,7 +153,7 @@ class RedisChatMessageCacheTests {
 
   @Test
   public void cacheMessageWithExistingCache() throws Exception {
-    ChatMessage message = new ChatMessage(new ObjectId("1"), new ObjectId("fedcba"), new ObjectId("abcdef"), Instant.now(), "yo");
+    Message message = new Message(new ObjectId("1"), new ObjectId("fedcba"), new ObjectId("abcdef"), Instant.now(), "yo");
     when(chatMessageCacheTemplate.opsForList().leftPush(any(), any())).thenReturn(2L);
 
     redisChatMessageCache.cacheMessage(message);

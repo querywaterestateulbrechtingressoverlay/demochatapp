@@ -1,7 +1,9 @@
 package com.qweuio.chat.websocket.dto;
 
+import java.util.UUID;
+
 public record ChatroomShortInfoDTO(
-  String id,
+  UUID id,
   String name
 ) {
 }

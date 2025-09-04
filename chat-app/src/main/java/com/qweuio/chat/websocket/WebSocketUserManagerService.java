@@ -1,7 +1,8 @@
 package com.qweuio.chat.websocket;
 
 import com.qweuio.chat.persistence.entity.Chatroom;
-import com.qweuio.chat.persistence.repository.ChatUserRepository;
+import com.qweuio.chat.persistence.repository.ChatroomRepository;
+import com.qweuio.chat.persistence.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,15 +15,18 @@ import java.util.*;
 
 @Service
 public class WebSocketUserManagerService {
-  Set<String> connectedUsers = new HashSet<>();
-  Map<String, Set<String>> chatrooms = new HashMap<>();
+  Set<UUID> connectedUsers = new HashSet<>();
+  Map<UUID, Set<UUID>> chatrooms = new HashMap<>();
 
   @Autowired
-  private ChatUserRepository chatUserRepo;
+  private UserRepository userRepo;
+
+  @Autowired
+  private ChatroomRepository chatroomRepo;
 
   Logger logger = LoggerFactory.getLogger(WebSocketUserManagerService.class);
 
-  public void addUserToChatroom(String chatroomId, String userId) {
+  public void addUserToChatroom(UUID chatroomId, UUID userId) {
     chatrooms.compute(chatroomId, (k, v) -> {
       if (v == null) {
         return new HashSet<>(Set.of(userId));
@@ -33,7 +37,7 @@ public class WebSocketUserManagerService {
     });
   }
 
-  public void removeUserFromChatroom(String chatroomId, String userId) {
+  public void removeUserFromChatroom(UUID chatroomId, UUID userId) {
     var chatroom = chatrooms.get(chatroomId);
     chatroom.remove(userId);
     if (chatroom.isEmpty()) {
@@ -43,41 +47,34 @@ public class WebSocketUserManagerService {
 
   @EventListener(SessionConnectEvent.class)
   void onClientConnect(SessionConnectEvent connectEvent) {
-    String userId = connectEvent.getUser().getName();
-    var connectedUserChatrooms = chatUserRepo
-      .getChatroomsByUser(userId)
-      .stream()
-      .map(Chatroom::id)
-      .toArray(String[]::new);
-    logger.info("user {} has connected", userId);
+    UUID userId = UUID.fromString(connectEvent.getUser().getName());
+    logger.debug("user {} has connected", userId);
     connectedUsers.add(userId);
-    for (String chatroomId : connectedUserChatrooms) {
-      addUserToChatroom(chatroomId, userId);
-    }
+    chatroomRepo
+      .findChatroomsByUserId(userId)
+      .forEach((cr) -> addUserToChatroom(cr.id(), userId));
   }
 
   @EventListener(SessionDisconnectEvent.class)
   void onClientDisconnect(SessionDisconnectEvent disconnectEvent) {
-    String userId = disconnectEvent.getUser().getName();
-    chatUserRepo
-      .getChatroomsByUser(userId)
-      .stream()
-      .map(Chatroom::id)
-      .forEach((chatroomId) -> removeUserFromChatroom(chatroomId, userId));
-    logger.info("user {} has disconnected", userId);
+    UUID userId = UUID.fromString(disconnectEvent.getUser().getName());
+    logger.debug("user {} has disconnected", userId);
     connectedUsers.remove(userId);
+    chatroomRepo
+      .findChatroomsByUserId(userId)
+      .forEach((cr) -> removeUserFromChatroom(cr.id(), userId));
   }
 
-  public Set<String> getChatroomConnectedClients(String chatroomId) {
+  public Set<UUID> getChatroomConnectedClients(UUID chatroomId) {
     return chatrooms.getOrDefault(chatroomId, Collections.emptySet());
   }
 
-  public boolean isUserConnected(String userId) {
+  public boolean isUserConnected(UUID userId) {
     System.out.println(connectedUsers);
     return connectedUsers.contains(userId);
   }
 
-  public boolean isChatroomPresent(String chatroomId) {
+  public boolean isChatroomPresent(UUID chatroomId) {
     return chatrooms.containsKey(chatroomId);
   }
 }

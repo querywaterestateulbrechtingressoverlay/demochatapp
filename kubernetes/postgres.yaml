@@ -1,0 +1,143 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init-config
+data:
+  schema: |-
+    CREATE TABLE users (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      username TEXT
+    );
+    CREATE TABLE login_data (
+      user_id UUID PRIMARY KEY,
+      login_data TEXT,
+      encoded_value TEXT
+    );
+    CREATE TABLE user_authorities (
+      user_id UUID,
+      authority TEXT,
+      PRIMARY KEY (user_id, authority),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    CREATE TABLE chatrooms (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      name TEXT
+    );
+    CREATE TABLE messages (
+      id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+      sender_id UUID,
+      chatroom_id UUID,
+      contents TEXT,
+      sent_at DATE,
+      FOREIGN KEY (chatroom_id) REFERENCES chatrooms(id),
+      FOREIGN KEY (sender_id) REFERENCES users(id)
+    );
+    CREATE TABLE chatroom_users (
+      chatroom_id UUID,
+      user_id UUID,
+      role TEXT,
+      PRIMARY KEY (chatroom_id, user_id),
+      FOREIGN KEY (chatroom_id) REFERENCES chatrooms(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;
+  app-user: |-
+    #!/bin/bash
+    psql -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE ROLE app_user ;"
+    psql -U $POSTGRES_USER -d $POSTGRES_DB -c "GRANT CONNECT ON DATABASE $POSTGRES_DB TO app_user;"
+    psql -U $POSTGRES_USER -d $POSTGRES_DB -c "GRANT USAGE ON SCHEMA public TO app_user;"
+    psql -U $POSTGRES_USER -d $POSTGRES_DB -c "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO app_user;"
+    psql -U $POSTGRES_USER -d $POSTGRES_DB -c "CREATE USER $POSTGRES_APP_USER WITH PASSWORD '$POSTGRES_APP_PASSWORD';"
+    psql -U $POSTGRES_USER -d $POSTGRES_DB -c "GRANT app_user TO $POSTGRES_APP_USER"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+spec:
+  selector:
+    app: postgres
+  clusterIP: None
+  ports:
+  - protocol: TCP
+    name: postgres
+    port: 5432
+---    
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  labels:
+    app: postgres
+spec:
+  serviceName: "postgres-service"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      volumes:
+      - name: init-config-volume
+        configMap:
+          name: postgres-init-config
+          items:
+          - key: schema
+            path: init-schema.sql
+          - key: app-user
+            path: app-user.sh
+      containers:
+      - name: postgres
+        image: postgres:latest
+        ports:
+        - containerPort: 5432
+          name: postgres
+        volumeMounts:
+        - name: data-volume
+          mountPath: /data/db
+        - name: init-config-volume
+          mountPath: /docker-entrypoint-initdb.d
+        env:
+        - name: PG_DATA
+          value: "/data/db"
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: chat-app-variables
+              key: db-database
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: chat-app-variables
+              key: db-root-user
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: chat-app-secrets
+              key: db-root-password
+        - name: POSTGRES_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: chat-app-variables
+              key: db-database
+        - name: POSTGRES_APP_USER
+          valueFrom:
+            configMapKeyRef:
+              name: chat-app-variables
+              key: db-app-user
+        - name: POSTGRES_APP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: chat-app-secrets
+              key: db-app-password
+  volumeClaimTemplates:
+  - metadata:
+      name: data-volume
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 5Gi

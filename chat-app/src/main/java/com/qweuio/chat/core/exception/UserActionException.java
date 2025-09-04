@@ -1,17 +1,19 @@
 package com.qweuio.chat.core.exception;
 
+import java.util.UUID;
+
 public class UserActionException extends RuntimeException {
-  private String causingUserId;
-  public UserActionException(String causingUserId, String message) {
+  private final UUID causingUserId;
+  public UserActionException(UUID causingUserId, String message) {
     super(message);
     this.causingUserId = causingUserId;
   }
-  public UserActionException(String causingUserId, String message, Throwable cause) {
+  public UserActionException(UUID causingUserId, String message, Throwable cause) {
     super(message, cause);
     this.causingUserId = causingUserId;
   }
 
-  public String getCausingUserId() {
+  public UUID getCausingUserId() {
     return causingUserId;
   }
 }

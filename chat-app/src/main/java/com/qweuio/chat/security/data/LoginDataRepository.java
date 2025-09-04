@@ -1,7 +1,12 @@
 package com.qweuio.chat.security.data;
 
 
+import com.qweuio.chat.persistence.repository.InsertRepository;
 import org.springframework.data.repository.CrudRepository;
 
-public interface UserCredentialsRepository extends CrudRepository<LoginData, String> {
+import java.util.Optional;
+import java.util.UUID;
+
+public interface LoginDataRepository extends CrudRepository<LoginData, UUID>, InsertRepository<LoginData> {
+  Optional<LoginData> findByLoginData(String loginData);
 }

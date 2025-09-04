@@ -1,16 +1,14 @@
 package com.qweuio.chat.persistence.entity;
 
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.relational.core.mapping.Table;
 
-import java.util.List;
+import java.util.UUID;
 
-@Document("chatrooms")
+@Table("chatrooms")
 public record Chatroom(
     @Id
-    String id,
-    String name,
-    List<UserWithRoleEntity> users,
-    List<String> messageIds
+    UUID id,
+    String name
 ) {
 }

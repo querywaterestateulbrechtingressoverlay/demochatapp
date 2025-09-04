@@ -2,10 +2,10 @@ package com.qweuio.chat.core;
 
 import com.qweuio.chat.core.exception.*;
 import com.qweuio.chat.core.exception.chatapp.*;
-import com.qweuio.chat.persistence.entity.ChatMessage;
-import com.qweuio.chat.persistence.entity.ChatUser;
+import com.qweuio.chat.persistence.entity.Message;
+import com.qweuio.chat.persistence.entity.User;
 import com.qweuio.chat.persistence.entity.Chatroom;
-import com.qweuio.chat.persistence.entity.UserWithRoleEntity;
+import com.qweuio.chat.persistence.entity.UserRole;
 import com.qweuio.chat.websocket.dto.MessageRequestDTO;
 import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 import org.slf4j.Logger;
@@ -15,14 +15,15 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class UserChatService extends ChatService {
   Logger logger = LoggerFactory.getLogger(UserChatService.class);
 
-  public List<ChatMessage> getChatroomRecentHistory(String callingUserId, String chatroomId) {
+  public List<Message> getChatroomRecentHistory(UUID callingUserId, UUID chatroomId) {
     try {
-      if (super.getUserRole(chatroomId, callingUserId) == UserWithRoleEntity.UserRole.NOT_A_MEMBER) {
+      if (super.getUserRole(chatroomId, callingUserId) == UserRole.NOT_A_MEMBER) {
         throw new InsufficientPermissionsException("get recent history in chatroom " + chatroomId);
       }
       return super.msgPersistingService.getRecentMessages(chatroomId);
@@ -31,14 +32,14 @@ public class UserChatService extends ChatService {
     }
   }
   
-  public ChatUser getUserInfo(String userId) {
-    return chatUserRepo.findById(userId).orElseThrow();
+  public User getUserInfo(UUID userId) {
+    return userRepo.findById(userId).orElseThrow();
   }
   
-  public ChatMessage saveMessage(String callingUserId, String chatroomId, MessageRequestDTO message) {
-    logger.info("save msg {} from {} in chatroom {}", message.toString(), callingUserId, chatroomId);
+  public Message saveMessage(UUID callingUserId, UUID chatroomId, MessageRequestDTO message) {
+    logger.info("saving msg {} from {} in chatroom {}", message.toString(), callingUserId, chatroomId);
     try {
-      if (super.getUserRole(chatroomId, callingUserId) == UserWithRoleEntity.UserRole.NOT_A_MEMBER) {
+      if (super.getUserRole(chatroomId, callingUserId) == UserRole.NOT_A_MEMBER) {
         logger.info("user is not a member of the chatroom, throwing an exception");
         throw new InsufficientPermissionsException("send message to chatroom " + chatroomId);
       }
@@ -50,18 +51,18 @@ public class UserChatService extends ChatService {
   }
 
   
-  public Chatroom addUserToChatroom(String callingUserId, String userToAddId, String chatroomId) {
+  public Chatroom addUserToChatroom(UUID callingUserId, UUID userToAddId, UUID chatroomId) {
     try {
-      if (super.getUserRole(chatroomId, callingUserId) != UserWithRoleEntity.UserRole.ADMIN) {
+      if (super.getUserRole(chatroomId, callingUserId) != UserRole.ADMIN) {
         throw new InsufficientPermissionsException("add user " + userToAddId + " to chatroom " + chatroomId);
       }
-      if (chatUserRepo.getChatroomCount(userToAddId).orElseThrow(() -> new UserNotFoundException(userToAddId)) >= 100) {
+      if (chatroomUserRepo.userChatroomCount(userToAddId) >= 100) {
         throw new TooManyChatroomsException(userToAddId, chatroomId);
       }
-      if (chatroomRepo.getUserCount(chatroomId).orElseThrow(() -> new ChatroomNotFoundException(chatroomId)) >= 100) {
+      if (chatroomUserRepo.chatroomUserCount(chatroomId) >= 100) {
         throw new TooManyUsersException(userToAddId, chatroomId);
       }
-      super.addUserToChatroom(chatroomId, userToAddId, UserWithRoleEntity.UserRole.MEMBER);
+      super.addUserToChatroom(chatroomId, userToAddId, UserRole.MEMBER);
       Optional<Chatroom> chatroom = chatroomRepo.findById(chatroomId);
       assert chatroom.isPresent();
       return chatroom.get();
@@ -70,10 +71,10 @@ public class UserChatService extends ChatService {
     }
   }
   
-  public void removeUserFromChatroom(String callingUserId, String userToRemoveId, String chatroomId) {
+  public void removeUserFromChatroom(UUID callingUserId, UUID userToRemoveId, UUID chatroomId) {
     try {
-      if (super.getUserRole(chatroomId, callingUserId) != UserWithRoleEntity.UserRole.ADMIN ||
-          super.getUserRole(userToRemoveId, chatroomId) == UserWithRoleEntity.UserRole.ADMIN) {
+      if (super.getUserRole(chatroomId, callingUserId) != UserRole.ADMIN ||
+          super.getUserRole(userToRemoveId, chatroomId) == UserRole.ADMIN) {
         throw new InsufficientPermissionsException("remove user " + userToRemoveId + " from chatroom " + chatroomId);
       }
       super.removeUserFromChatroom(chatroomId, userToRemoveId);
@@ -82,7 +83,7 @@ public class UserChatService extends ChatService {
     }
   }
   
-  public Chatroom createChatroom(String callingUserId, String chatroomName) {
+  public Chatroom createChatroom(UUID callingUserId, String chatroomName) {
     try {
       return super.createChatroom(callingUserId, chatroomName);
     } catch (ChatAppException e) {
@@ -90,9 +91,9 @@ public class UserChatService extends ChatService {
     }
   }
   
-  public void deleteChatroom(String callingUserId, String chatroomId) {
+  public void deleteChatroom(UUID callingUserId, UUID chatroomId) {
     try {
-      if (super.getUserRole(chatroomId, callingUserId) != UserWithRoleEntity.UserRole.ADMIN) {
+      if (super.getUserRole(chatroomId, callingUserId) != UserRole.ADMIN) {
         throw new InsufficientPermissionsException("delete chatroom " + chatroomId);
       }
       super.deleteChatroom(chatroomId);
@@ -101,9 +102,9 @@ public class UserChatService extends ChatService {
     }
   }
 
-  public List<ChatUser> getChatroomUsers(String callingUserId, String chatroomId) {
+  public List<User> getChatroomUsers(UUID callingUserId, UUID chatroomId) {
     try {
-      if (super.getUserRole(chatroomId, callingUserId) == UserWithRoleEntity.UserRole.NOT_A_MEMBER) {
+      if (super.getUserRole(chatroomId, callingUserId) == UserRole.NOT_A_MEMBER) {
         throw new InsufficientPermissionsException("get user list of chatroom " + chatroomId);
       }
       return super.getChatroomUsers(chatroomId);

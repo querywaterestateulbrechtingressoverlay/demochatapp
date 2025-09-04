@@ -1,6 +1,6 @@
 package com.qweuio.chat.persistence;
 
-import com.qweuio.chat.persistence.entity.ChatMessage;
+import com.qweuio.chat.persistence.entity.Message;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -10,18 +10,19 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class RedisChatMessageCache {
   private final int RECENT_MESSAGE_COUNT = 10;
 
-  private final String CACHED_CHATROOMS = "cachedchatrooms";
+  private final String CACHED_CHATROOMS = "cached_chatrooms";
   private final String CHATROOM_PREFIX = "chatroom:";
   private final long CACHE_TRIM_INTERVAL = 600_000L;
   private final Duration CACHE_LIFESPAN =  Duration.ofMinutes(5);
 
   @Autowired
-  RedisTemplate<String, ChatMessage> chatMessageCacheTemplate;
+  RedisTemplate<String, Message> chatMessageCacheTemplate;
 
   @Autowired
   RedisTemplate<String, String> chatKeyIndexTemplate;
@@ -41,11 +42,11 @@ public class RedisChatMessageCache {
     }
   }
 
-  public List<ChatMessage> getMessagesFromCache(String chatroomId, int messageCount) {
+  public List<Message> getMessagesFromCache(UUID chatroomId, int messageCount) {
     return chatMessageCacheTemplate.opsForList().range(CHATROOM_PREFIX + chatroomId, 0, messageCount);
   }
 
-  public boolean isCachePresent(String chatroomId) {
+  public boolean isCachePresent(UUID chatroomId) {
     if (isChatroomPresentInCachedSet(chatroomId)) {
       if (isChatroomCachePresent(chatroomId)) {
         return true;
@@ -55,21 +56,21 @@ public class RedisChatMessageCache {
     return false;
   }
 
-  public boolean isChatroomPresentInCachedSet(String chatroomId) {
+  public boolean isChatroomPresentInCachedSet(UUID chatroomId) {
     return chatKeyIndexTemplate.opsForSet().isMember(CACHED_CHATROOMS, chatroomId);
   }
 
-  public boolean isChatroomCachePresent(String chatroomId) {
+  public boolean isChatroomCachePresent(UUID chatroomId) {
     return chatMessageCacheTemplate.opsForList().size(CHATROOM_PREFIX + chatroomId) > 0;
   }
 
-  public void removeOrphanedCache(String chatroomId) {
+  public void removeOrphanedCache(UUID chatroomId) {
     chatKeyIndexTemplate.opsForSet().remove(CACHED_CHATROOMS, chatroomId);
   }
 
-  public void cacheMessage(ChatMessage message) {
+  public void cacheMessage(Message message) {
     if (chatMessageCacheTemplate.opsForList().leftPush(CHATROOM_PREFIX + message.chatroomId(), message) == 1) {
-      chatKeyIndexTemplate.opsForSet().add(CACHED_CHATROOMS, message.chatroomId());
+      chatKeyIndexTemplate.opsForSet().add(CACHED_CHATROOMS, message.chatroomId().toString());
     }
     chatMessageCacheTemplate.expire(CHATROOM_PREFIX + message.chatroomId(), CACHE_LIFESPAN);
   }

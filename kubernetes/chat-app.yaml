@@ -24,16 +24,21 @@ spec:
         - configMapRef:
             name: chat-variables
         env:
+        - name: DB_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: chat-app-variables
+              key: db-database
         - name: DB_USERNAME
           valueFrom:
-            secretKeyRef:
-              name: chat-app-secrets
-              key: mongo-user
+            configMapKeyRef:
+              name: chat-app-variables
+              key: db-app-user
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
               name: chat-app-secrets
-              key: mongo-password
+              key: db-app-password
         - name: JWT_RSA_PRIVATE
           valueFrom:
             secretKeyRef:
@@ -44,7 +49,6 @@ spec:
             secretKeyRef:
               name: chat-app-jwt-keys
               key: public
-
       - name: redis
         image: redis:latest
         imagePullPolicy: IfNotPresent
@@ -68,9 +72,9 @@ kind: ConfigMap
 metadata:
   name: chat-variables
 data:
-  DB_HOST: mongo-service
-  DB_PORT: '27017'
-  DB_DATABASE: database
+  DB_URL: 'jdbc:postgresql://postgres-0.postgres-service:5432/postgres'
+  DB_HOST: postgres-service
+  DB_PORT: '5432'
 
   REDIS_HOST: localhost
   REDIS_PORT: '6379'

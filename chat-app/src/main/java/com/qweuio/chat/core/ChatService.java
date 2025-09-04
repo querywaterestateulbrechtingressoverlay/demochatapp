@@ -1,26 +1,18 @@
 package com.qweuio.chat.core;
 
-import com.mongodb.client.result.UpdateResult;
 import com.qweuio.chat.core.exception.chatapp.ChatroomNotFoundException;
-import com.qweuio.chat.core.exception.chatapp.TooManyChatroomsException;
 import com.qweuio.chat.core.exception.chatapp.UserNotFoundException;
 import com.qweuio.chat.persistence.MessagePersistingService;
-import com.qweuio.chat.persistence.entity.ChatUser;
-import com.qweuio.chat.persistence.entity.Chatroom;
-import com.qweuio.chat.persistence.entity.UserWithRoleEntity;
-import com.qweuio.chat.persistence.repository.ChatUserRepository;
+import com.qweuio.chat.persistence.entity.*;
+import com.qweuio.chat.persistence.repository.UserRepository;
 import com.qweuio.chat.persistence.repository.ChatroomRepository;
+import com.qweuio.chat.persistence.repository.ChatroomUserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.mongodb.core.MongoTemplate;
-import org.springframework.data.mongodb.core.query.Criteria;
-import org.springframework.data.mongodb.core.query.Query;
-import org.springframework.data.mongodb.core.query.Update;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
+import java.util.UUID;
 
 public class ChatService {
   Logger logger = LoggerFactory.getLogger(ChatService.class);
@@ -29,98 +21,50 @@ public class ChatService {
   @Autowired
   protected ChatroomRepository chatroomRepo;
   @Autowired
-  protected ChatUserRepository chatUserRepo;
+  protected ChatroomUserRepository chatroomUserRepo;
   @Autowired
-  protected MongoTemplate mongoTemplate;
+  protected UserRepository userRepo;
 
-  public UserWithRoleEntity.UserRole getUserRole(String chatroomId, String userId) {
-    logger.info("chatroom id {} user id {}", chatroomId, userId);
-    if (!chatroomRepo.existsById(chatroomId)) throw new ChatroomNotFoundException(chatroomId);
-    logger.info("user found in chatroom");
-    return chatroomRepo.getUserRole(chatroomId, userId);
+  public UserRole getUserRole(UUID chatroomId, UUID userId) {
+    return chatroomUserRepo
+        .findById(new ChatroomAndUser(chatroomId, userId))
+        .orElseThrow(() -> new ChatroomNotFoundException(chatroomId))
+        .role();
   }
 
-  public List<Chatroom> getUserChatrooms(String userId) {
-    return chatUserRepo.getChatroomsByUser(userId);
+  public List<Chatroom> getUserChatrooms(UUID userId) {
+    return chatroomRepo.findChatroomsByUserId(userId);
   }
 
-
-
-  public Chatroom createChatroom(String firstUserId, String chatroomName) {
-    ChatUser creator = chatUserRepo.findById(firstUserId).orElseThrow(() -> new RuntimeException("a ghost is trying to create a new chatroom"));
-    if (creator.chatrooms().size() >= 100) {
-      throw new TooManyChatroomsException(firstUserId, null);
-    }
-    Chatroom newChatroom = chatroomRepo.save(
-      new Chatroom(
-        null, chatroomName,
-        List.of(new UserWithRoleEntity(firstUserId, UserWithRoleEntity.UserRole.ADMIN)),
-        Collections.emptyList()
-      )
-    );
-    mongoTemplate.updateFirst(
-      new Query(Criteria.where("_id").is(firstUserId)),
-      new Update().addToSet("chatrooms", newChatroom.id()),
-      "users");
+  public Chatroom createChatroom(UUID creatorId, String chatroomName) {
+    Chatroom newChatroom = chatroomRepo.save(new Chatroom(null, chatroomName));
+    ChatroomUsers creator = ChatroomUsers.fromData(newChatroom.id(), creatorId, UserRole.ADMIN);
+    chatroomUserRepo.insert(creator);
 
     return newChatroom;
   }
 
-  public void deleteChatroom(String chatroomId) {
+  public void deleteChatroom(UUID chatroomId) {
     if (!chatroomRepo.existsById(chatroomId)) throw new ChatroomNotFoundException(chatroomId);
-    List<String> chatUsers = chatroomRepo
-      .getUsersByChatroom(chatroomId)
-      .stream()
-      .map(ChatUser::id)
-      .toList();
 
-    mongoTemplate.updateMulti(
-      new Query(Criteria.where("_id").in(chatUsers)),
-      new Update().pull("chatrooms", chatroomId),
-      "users");
+    chatroomUserRepo.deleteAll(chatroomUserRepo.findByChatroomId(chatroomId));
     chatroomRepo.deleteById(chatroomId);
   }
 
-  public void modifyUserRole(String chatroomId, String userId, UserWithRoleEntity.UserRole newUserRole) {
-    if (getUserRole(chatroomId, userId) == UserWithRoleEntity.UserRole.NOT_A_MEMBER) throw new UserNotFoundException(userId);
-    mongoTemplate.updateFirst(
-      new Query(Criteria.where("_id").is(chatroomId)).addCriteria(Criteria.where("users.userId").is(userId)),
-      new Update().set("users.userId", newUserRole),
-      "chatrooms"
-    );
+  public void modifyUserRole(UUID chatroomId, UUID userId, UserRole newUserRole) {
+    if (!chatroomUserRepo.existsById(new ChatroomAndUser(chatroomId, userId))) throw new UserNotFoundException(userId);
+    chatroomUserRepo.update(ChatroomUsers.fromData(chatroomId, userId, newUserRole));
   }
 
-  public void addUserToChatroom(String chatroomId, String userId, UserWithRoleEntity.UserRole role) {
-    UpdateResult u1 = mongoTemplate.updateFirst(
-      new Query(Criteria.where("_id").is(userId)),
-      new Update().addToSet("chatrooms", chatroomId),
-      "users");
-    logger.info(u1.toString());
-    UpdateResult u2 = mongoTemplate.updateFirst(
-      new Query(Criteria.where("_id").is(chatroomId)),
-      new Update().addToSet("users", new UserWithRoleEntity(userId, role)),
-      "chatrooms");
-    logger.info(u2.toString());
+  public void addUserToChatroom(UUID chatroomId, UUID userId, UserRole role) {
+    chatroomUserRepo.insert(ChatroomUsers.fromData(chatroomId, userId, role));
   }
 
-  public void removeUserFromChatroom(String chatroomId, String userId) {
-    if (chatroomRepo.getUsersByChatroom(chatroomId).stream().anyMatch(cu -> Objects.equals(cu.id(), userId))) {
-      throw new UserNotFoundException(userId);
-    }
-    mongoTemplate.updateFirst(
-      new Query(Criteria.where("_id").is(userId)),
-      new Update().pull("chatrooms", chatroomId),
-      "users");
-    mongoTemplate.updateFirst(
-      new Query(Criteria.where("_id").is(chatroomId)),
-      new Update().pull("users", Query.query(Criteria.where("userId").is(userId))),
-      "chatrooms");
+  public void removeUserFromChatroom(UUID chatroomId, UUID userId) {
+    chatroomUserRepo.deleteById(new ChatroomAndUser(chatroomId, userId));
   }
 
-  public List<ChatUser> getChatroomUsers(String chatroomId) {
-    logger.info("getting users from chatroom {}",chatroomId);
-    List<ChatUser> users = chatroomRepo.getUsersByChatroom(chatroomId);
-    logger.info("users: {}", users.toString());
-    return users;
+  public List<User> getChatroomUsers(UUID chatroomId) {
+    return userRepo.findUsersByChatroomId(chatroomId);
   }
 }

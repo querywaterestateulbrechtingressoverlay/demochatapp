@@ -6,8 +6,8 @@ import org.springframework.data.relational.core.mapping.Table;
 import java.time.Instant;
 import java.util.UUID;
 
-@Table("chat_messages")
-public record ChatMessage(
+@Table("messages")
+public record Message(
   @Id
   UUID id,
   UUID senderId,
