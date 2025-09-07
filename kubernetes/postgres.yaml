@@ -28,7 +28,7 @@ data:
       sender_id UUID,
       chatroom_id UUID,
       contents TEXT,
-      sent_at DATE,
+      sent_at TIMESTAMP,
       FOREIGN KEY (chatroom_id) REFERENCES chatrooms(id),
       FOREIGN KEY (sender_id) REFERENCES users(id)
     );

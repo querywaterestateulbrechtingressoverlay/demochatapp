@@ -43,7 +43,7 @@ public class RedisChatMessageCache {
   }
 
   public List<Message> getMessagesFromCache(UUID chatroomId, int messageCount) {
-    return chatMessageCacheTemplate.opsForList().range(CHATROOM_PREFIX + chatroomId, 0, messageCount);
+    return chatMessageCacheTemplate.opsForList().range(CHATROOM_PREFIX + chatroomId.toString(), 0, messageCount);
   }
 
   public boolean isCachePresent(UUID chatroomId) {
@@ -57,21 +57,21 @@ public class RedisChatMessageCache {
   }
 
   public boolean isChatroomPresentInCachedSet(UUID chatroomId) {
-    return chatKeyIndexTemplate.opsForSet().isMember(CACHED_CHATROOMS, chatroomId);
+    return chatKeyIndexTemplate.opsForSet().isMember(CACHED_CHATROOMS, chatroomId.toString());
   }
 
   public boolean isChatroomCachePresent(UUID chatroomId) {
-    return chatMessageCacheTemplate.opsForList().size(CHATROOM_PREFIX + chatroomId) > 0;
+    return chatMessageCacheTemplate.opsForList().size(CHATROOM_PREFIX + chatroomId.toString()) > 0;
   }
 
   public void removeOrphanedCache(UUID chatroomId) {
-    chatKeyIndexTemplate.opsForSet().remove(CACHED_CHATROOMS, chatroomId);
+    chatKeyIndexTemplate.opsForSet().remove(CACHED_CHATROOMS, chatroomId.toString());
   }
 
   public void cacheMessage(Message message) {
-    if (chatMessageCacheTemplate.opsForList().leftPush(CHATROOM_PREFIX + message.chatroomId(), message) == 1) {
+    if (chatMessageCacheTemplate.opsForList().leftPush(CHATROOM_PREFIX + message.chatroomId().toString(), message) == 1) {
       chatKeyIndexTemplate.opsForSet().add(CACHED_CHATROOMS, message.chatroomId().toString());
     }
-    chatMessageCacheTemplate.expire(CHATROOM_PREFIX + message.chatroomId(), CACHE_LIFESPAN);
+    chatMessageCacheTemplate.expire(CHATROOM_PREFIX + message.chatroomId().toString(), CACHE_LIFESPAN);
   }
 }
