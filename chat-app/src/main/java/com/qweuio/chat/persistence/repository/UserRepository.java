@@ -12,7 +12,7 @@ public interface UserRepository extends CrudRepository<User, UUID> {
   Optional<User> findByUsername(String username);
   @Query("""
     SELECT users.* FROM chatroom_users
-    JOIN users ON chatroom_users.chatroom_id = users.id
-    WHERE chatroom_users.user_id = :chatroomId""")
+    JOIN users ON chatroom_users.user_id = users.id
+    WHERE chatroom_users.chatroom_id = :chatroomId""")
   List<User> findUsersByChatroomId(UUID chatroomId);
 }

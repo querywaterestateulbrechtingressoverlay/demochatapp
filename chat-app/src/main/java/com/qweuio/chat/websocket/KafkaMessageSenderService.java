@@ -5,10 +5,11 @@ import com.qweuio.chat.persistence.entity.User;
 import com.qweuio.chat.persistence.repository.ChatroomRepository;
 import com.qweuio.chat.persistence.repository.UserRepository;
 import com.qweuio.chat.websocket.dto.*;
-import com.qweuio.chat.websocket.dto.outbound.ChatroomListUpdateDTO;
+import com.qweuio.chat.websocket.dto.messaging.ChatroomListUpdateDTO;
+import com.qweuio.chat.websocket.dto.outbound.ChatroomListDTO;
 import com.qweuio.chat.websocket.dto.outbound.ErrorDTO;
 import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
-import com.qweuio.chat.websocket.dto.outbound.UserListUpdateDTO;
+import com.qweuio.chat.websocket.dto.messaging.UserListUpdateDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +21,8 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.UUID;
 
-import static com.qweuio.chat.websocket.dto.outbound.UserListUpdateDTO.Operation.ADD;
-import static com.qweuio.chat.websocket.dto.outbound.UserListUpdateDTO.Operation.REMOVE;
+import static com.qweuio.chat.websocket.dto.messaging.UserListUpdateDTO.Operation.ADD;
+import static com.qweuio.chat.websocket.dto.messaging.UserListUpdateDTO.Operation.REMOVE;
 
 @Service
 public class KafkaMessageSenderService {

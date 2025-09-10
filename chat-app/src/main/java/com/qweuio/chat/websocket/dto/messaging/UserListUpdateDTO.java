@@ -1,4 +1,4 @@
-package com.qweuio.chat.websocket.dto.outbound;
+package com.qweuio.chat.websocket.dto.messaging;
 
 import com.qweuio.chat.websocket.dto.UserShortInfoDTO;
 
@@ -8,7 +8,7 @@ import java.util.UUID;
 public record UserListUpdateDTO(
   List<UUID> updateReceivingUserId,
   UUID chatroomId,
-  List<UserShortInfoDTO> updatedUserIdList,
+  List<UserShortInfoDTO> userListUpdate,
   Operation operation
 ) {
   public enum Operation {

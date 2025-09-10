@@ -4,37 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="faa8edc1-4058-4048-83ce-22aa59000b48" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/entity/ChatroomUser.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/security/data/LoginDataRepository.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/security/data/UserAuthoritiesRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/build.gradle.kts" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/build.gradle.kts" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/core/ChatService.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/core/ChatService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/core/UserChatService.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/core/UserChatService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/MessagePersistingService.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/MessagePersistingService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/RedisChatMessageCache.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/RedisChatMessageCache.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/config/MongoConfig.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/entity/ChatMessage.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/entity/ChatMessage.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/entity/ChatUser.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/entity/ChatUser.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/entity/Chatroom.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/entity/Chatroom.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/entity/UserWithRoleEntity.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/repository/ChatMessageRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/repository/ChatMessageRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/repository/ChatUserRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/repository/ChatUserRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/repository/ChatroomRepository.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/persistence/repository/ChatroomRepository.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/security/AppSecurityConfig.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/security/AppSecurityConfig.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/security/CustomUserDetailsService.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/security/CustomUserDetailsManager.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/security/data/UserCredentials.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/security/data/UserCredentialsRepository.java" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/websocket/ChatMessagingController.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/websocket/ChatMessagingController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/websocket/KafkaMessageSenderService.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/websocket/KafkaMessageSenderService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/websocket/WebSocketUserManagerService.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/java/com/qweuio/chat/websocket/WebSocketUserManagerService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/main/resources/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/chat-app/src/test/java/com/qweuio/chat/persistence/RedisChatMessageCacheTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/chat-app/src/test/java/com/qweuio/chat/persistence/RedisChatMessageCacheTests.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/kubernetes/chat-app.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/kubernetes/chat-app.yaml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/kubernetes/mongo-storage.yaml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/kubernetes/mongo.yaml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/kubernetes/secrets.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/kubernetes/secrets.yaml" afterDir="false" />
-    </list>
+    <list default="true" id="faa8edc1-4058-4048-83ce-22aa59000b48" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />

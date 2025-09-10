@@ -59,6 +59,7 @@ public class ChatMessagingController {
   public void getUsers(@DestinationVariable String chatroomId,
                        Principal principal) {
     List<User> users = chatService.getChatroomUsers(UUID.fromString(principal.getName()), UUID.fromString(chatroomId));
+    logger.info(users.toString());
     senderService.addUserToChatroom(UUID.fromString(chatroomId), users.stream().map(Converters::toDTO).toList());
   }
 

@@ -101,7 +101,7 @@ spec:
         - name: init-config-volume
           mountPath: /docker-entrypoint-initdb.d
         env:
-        - name: PG_DATA
+        - name: PGDATA
           value: "/data/db"
         - name: POSTGRES_DB
           valueFrom:

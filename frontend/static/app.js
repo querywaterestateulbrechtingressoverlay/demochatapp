@@ -7,6 +7,7 @@ const cachedUsers = new Map();
 const cachedMessages = new Map();
 var jwttoken;
 const stompClient = new StompJs.Client({
+  heartbeatOutgoing: 10000,
   brokerURL: websocketUrl
 });
 var userId;
@@ -89,22 +90,22 @@ function showUserList(chatroomId) {
 
 function receiveUserListUpdate(userList, operation) {
   if (operation == null || operation == 'replace') {
-    cachedUsers.set(userList.chatId, userList.users);
+    cachedUsers.set(userList.chatroomId, userList.userListUpdate);
   } else if (operation == 'add') {
-    if (!cachedUsers.has(userList.chatId)) {
-      cachedUsers.set(userList.chatId, userList.users);
+    if (!cachedUsers.has(userList.chatroomId)) {
+      cachedUsers.set(userList.chatroomId, userList.userListUpdate);
     } else {
-      cachedUsers.set(userList.chatId, cachedUsers.get(userList.chatId).concat(userList.users));
+      cachedUsers.set(userList.chatroomId, cachedUsers.get(userList.chatroomId).concat(userList.userListUpdate));
     }
   } else if (operation == 'remove') {
-    if (cachedUsers.has(userList.chatId)) {
+    if (cachedUsers.has(userList.chatroomId)) {
       const users = cachedUsers.get(chatroomId);
-      const idsToRemove = userList.users.map(u => u.id);
+      const idsToRemove = userList.userListUpdate.map(u => u.id);
       cachedUsers.set(userList.chatId, users.filter(u => !idsToRemove.includes(u.id)));
     }
   }
-  if (currentChatroom == userList.chatId) {
-    showUserList(userList.chatId);
+  if (currentChatroom == userList.chatroomId) {
+    showUserList(userList.chatroomId);
   }
 }
 
@@ -165,22 +166,22 @@ function receiveChatroomListUpdate(chatroomList, operation) {
 }
 
 function receiveNewMessage(message) {
-  if (!cachedMessages.has(message.chatroomId)) {
-    cachedMessages.set(message.chatroomId, []);
+  if (!cachedMessages.has(message.chatroom)) {
+    cachedMessages.set(message.chatroom, []);
   }
-  cachedMessages.get(message.chatroomId).push({
+  cachedMessages.get(message.chatroom).push({
     message: message.message,
-    senderId: message.senderId
+    sender: message.sender
   });
   if (message.chatroom == currentChatroom) {
-    $("#message-list").append("<tr><td>" + message.sender + " at " + message.timestamp + ":" + message.content + "</td></tr>");
+    $("#message-list").append("<tr><td>" + cachedUsers.get(currentChatroom).find((user) => user.id == message.sender).name + " at " + new Date(message.timestamp).toLocaleTimeString() + ":" + message.content + "</td></tr>");
   }
 }
 
 function showCachedMessages(newChatroomId) {
   $("#message-list").empty();
   for (const message of cachedMessages.get(newChatroomId)) {
-    $("#message-list").append("<tr><td>" + message.senderId + ":" + message.message + "</td></tr>");
+    $("#message-list").append("<tr><td>" + cachedUsers.get(newChatroomId).find((user) => user.id == message.sender).name + " at " + new Date(message.timestamp).toLocaleTimeString() + ":" + message.content + "</td></tr>");
   }
 }
 
@@ -191,14 +192,14 @@ function requestChatHistoryUpdate(chatroomId) {
   });
 }
 
-function receieveChatHistoryUpdate(chatroomId, messageList) {
+function receiveChatHistoryUpdate(chatroomId, messageList) {
   if (!cachedMessages.has(chatroomId)) {
     cachedMessages.set(chatroomId, []);
   }
   cachedMessages.get(chatroomId).push(...messageList);
   if (chatroomId == currentChatroom) {
     messageList.forEach((message) => {
-      $("#message-list").append("<tr><td>" + message.senderId + " at " + message.sentAt + ":" + message.content + "</td></tr>");
+      $("#message-list").append("<tr><td>" + cachedUsers.get(chatroomId).find((user) => user.id == message.sender).name + " at " + new Date(message.timestamp).toLocaleTimeString() + ":" + message.content + "</td></tr>");
     });
   }
 }
@@ -210,7 +211,7 @@ function switchChatrooms(chatroomId) {
   if (!cachedUsers.has(chatroomId.toString()) || cachedUsers.get(chatroomId.toString()).length == 0) {
     requestChatUserListUpdate();
   }
-  showCachedMessages();
+  showCachedMessages(chatroomId);
 }
 
 async function login() {
@@ -222,9 +223,9 @@ async function login() {
     })).json());
     userId = jwtResponse.id;
     fetchHeaders.set("Authorization", "Bearer " + jwtResponse.token);
-
+    const username = $("#login-username").val();
     $("#login-form").empty();
-    $("#login-form").append("<p>Logged in as " + $("#login").val());
+    $("#login-form").append("<p>Logged in as " + username);
     stompClient.connectHeaders['Authorization'] = jwtResponse.token;
 
     connect();

@@ -1,4 +1,4 @@
-package com.qweuio.chat.websocket.dto.outbound;
+package com.qweuio.chat.websocket.dto.messaging;
 
 import com.qweuio.chat.websocket.dto.ChatroomShortInfoDTO;
 
