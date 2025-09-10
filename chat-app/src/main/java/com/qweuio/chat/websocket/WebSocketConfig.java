@@ -2,6 +2,7 @@ package com.qweuio.chat.websocket;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.messaging.Message;
@@ -12,6 +13,7 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ExecutorChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -31,9 +33,17 @@ import java.util.List;
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
   @Autowired
   JwtDecoder jwtDecoder;
+  private TaskScheduler messageBrokerTaskScheduler;
+
+  @Autowired
+  public void setMessageBrokerTaskScheduler(@Lazy TaskScheduler taskScheduler) {
+    this.messageBrokerTaskScheduler = taskScheduler;
+  }
   @Override
   public void configureMessageBroker(MessageBrokerRegistry registry) {
-    registry.enableSimpleBroker("/messages", "/system", "/user");
+    registry.enableSimpleBroker("/messages", "/system", "/user")
+        .setHeartbeatValue(new long[] {10000, 10000})
+        .setTaskScheduler(this.messageBrokerTaskScheduler);
     registry.setApplicationDestinationPrefixes("/chat");
   }
   @Override

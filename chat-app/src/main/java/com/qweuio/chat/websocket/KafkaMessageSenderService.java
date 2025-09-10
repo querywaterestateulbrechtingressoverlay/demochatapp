@@ -6,8 +6,11 @@ import com.qweuio.chat.persistence.repository.ChatroomRepository;
 import com.qweuio.chat.persistence.repository.UserRepository;
 import com.qweuio.chat.websocket.dto.*;
 import com.qweuio.chat.websocket.dto.messaging.ChatroomListUpdateDTO;
+import com.qweuio.chat.websocket.dto.messaging.ChatroomShortInfoDTO;
+import com.qweuio.chat.websocket.dto.messaging.UserShortInfoDTO;
+import com.qweuio.chat.websocket.dto.outbound.ChatHistoryResponseDTO;
 import com.qweuio.chat.websocket.dto.outbound.ChatroomListDTO;
-import com.qweuio.chat.websocket.dto.outbound.ErrorDTO;
+import com.qweuio.chat.websocket.dto.outbound.ErrorResponseDTO;
 import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 import com.qweuio.chat.websocket.dto.messaging.UserListUpdateDTO;
 import org.slf4j.Logger;
@@ -52,9 +55,9 @@ public class KafkaMessageSenderService {
   @Autowired
   UserRepository userRepo;
 
-  public void sendErrorMessage(ErrorDTO errorDTO) {
-    logger.info("error " + errorDTO.toString());
-    kafkaMessageTemplate.send(updateTopic, errorPartition, null, errorDTO);
+  public void sendErrorMessage(ErrorResponseDTO errorResponseDTO) {
+    logger.info("error " + errorResponseDTO.toString());
+    kafkaMessageTemplate.send(updateTopic, errorPartition, null, errorResponseDTO);
   }
 
   public void sendMessage(Message message, UUID chatroomId) {

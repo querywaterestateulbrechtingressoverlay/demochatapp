@@ -4,8 +4,8 @@ import com.qweuio.chat.core.exception.ChatAppException;
 
 import java.util.UUID;
 
-public class UserNotFoundException extends ChatAppException {
-  public UserNotFoundException(UUID queriedUserId) {
+public class UserNameNotFoundException extends ChatAppException {
+  public UserNameNotFoundException(String queriedUserId) {
     super("User " + queriedUserId + " not found");
   }
 }

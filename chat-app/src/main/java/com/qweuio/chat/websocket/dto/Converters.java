@@ -3,6 +3,8 @@ package com.qweuio.chat.websocket.dto;
 import com.qweuio.chat.persistence.entity.Message;
 import com.qweuio.chat.persistence.entity.User;
 import com.qweuio.chat.persistence.entity.Chatroom;
+import com.qweuio.chat.websocket.dto.messaging.ChatroomShortInfoDTO;
+import com.qweuio.chat.websocket.dto.messaging.UserShortInfoDTO;
 import com.qweuio.chat.websocket.dto.outbound.ChatroomListDTO;
 import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 

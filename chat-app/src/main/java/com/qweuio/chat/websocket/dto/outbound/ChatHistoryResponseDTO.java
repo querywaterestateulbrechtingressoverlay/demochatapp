@@ -1,6 +1,4 @@
-package com.qweuio.chat.websocket.dto;
-
-import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
+package com.qweuio.chat.websocket.dto.outbound;
 
 import java.util.List;
 import java.util.UUID;

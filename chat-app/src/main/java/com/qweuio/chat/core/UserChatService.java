@@ -6,7 +6,7 @@ import com.qweuio.chat.persistence.entity.Message;
 import com.qweuio.chat.persistence.entity.User;
 import com.qweuio.chat.persistence.entity.Chatroom;
 import com.qweuio.chat.persistence.entity.UserRole;
-import com.qweuio.chat.websocket.dto.MessageRequestDTO;
+import com.qweuio.chat.websocket.dto.inbound.MessageRequestDTO;
 import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,9 +1,9 @@
 package com.qweuio.chat.websocket;
 
 import com.qweuio.chat.websocket.dto.outbound.ChatroomListDTO;
-import com.qweuio.chat.websocket.dto.ChatroomShortInfoDTO;
+import com.qweuio.chat.websocket.dto.messaging.ChatroomShortInfoDTO;
 import com.qweuio.chat.websocket.dto.messaging.ChatroomListUpdateDTO;
-import com.qweuio.chat.websocket.dto.outbound.ErrorDTO;
+import com.qweuio.chat.websocket.dto.outbound.ErrorResponseDTO;
 import com.qweuio.chat.websocket.dto.outbound.MessageDTO;
 import com.qweuio.chat.websocket.dto.messaging.UserListUpdateDTO;
 import com.qweuio.chat.websocket.dto.outbound.UserListDTO;
@@ -35,8 +35,8 @@ public class KafkaMessageReceiver {
 
   @KafkaListener(id = "errorHandler", topicPartitions = {
     @TopicPartition(topic = "${chatapp.kafka.update-topic}", partitions = "${chatapp.kafka.update-topic-partition.error}") })
-  void receiveErrorMessage(ErrorDTO errorDTO) {
-    template.convertAndSendToUser(errorDTO.recipientId().toString(), errorDest, errorDTO);
+  void receiveErrorMessage(ErrorResponseDTO errorResponseDTO) {
+    template.convertAndSendToUser(errorResponseDTO.recipientId().toString(), errorDest, errorResponseDTO);
   }
 
   @KafkaListener(id = "messageHandler", topicPartitions = {

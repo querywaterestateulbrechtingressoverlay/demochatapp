@@ -1,7 +1,5 @@
 package com.qweuio.chat.websocket.dto.messaging;
 
-import com.qweuio.chat.websocket.dto.ChatroomShortInfoDTO;
-
 import java.util.List;
 import java.util.UUID;
 

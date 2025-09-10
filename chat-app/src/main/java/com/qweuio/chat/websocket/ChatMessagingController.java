@@ -2,12 +2,14 @@ package com.qweuio.chat.websocket;
 
 import com.qweuio.chat.core.UserChatService;
 import com.qweuio.chat.core.exception.*;
+import com.qweuio.chat.core.exception.chatapp.UserIdNotFoundException;
+import com.qweuio.chat.core.exception.chatapp.UserNameNotFoundException;
 import com.qweuio.chat.persistence.entity.Message;
 import com.qweuio.chat.persistence.entity.User;
 import com.qweuio.chat.persistence.entity.Chatroom;
 import com.qweuio.chat.websocket.dto.*;
-import com.qweuio.chat.websocket.dto.inbound.MessageHistoryRequestDTO;
-import com.qweuio.chat.websocket.dto.outbound.ErrorDTO;
+import com.qweuio.chat.websocket.dto.inbound.*;
+import com.qweuio.chat.websocket.dto.outbound.ErrorResponseDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,11 +31,11 @@ public class ChatMessagingController {
 
   @MessageExceptionHandler({UserActionException.class})
   void userActionException(Principal principal, UserActionException exception) {
-    senderService.sendErrorMessage(new ErrorDTO(UUID.fromString(principal.getName()), Instant.now(), exception.getMessage()));
+    senderService.sendErrorMessage(new ErrorResponseDTO(UUID.fromString(principal.getName()), Instant.now(), exception.getMessage()));
   }
 
   @MessageMapping("/getAvailableChatrooms")
-  public void getChatrooms(@Headers Map<String, String> headers, Principal principal) {
+  public void getChatrooms(Principal principal) {
     logger.info("get av chatrooms, user {}", UUID.fromString(principal.getName()));
     senderService.addChatroomToUser(UUID.fromString(principal.getName()), Converters.toDTO(chatService.getUserChatrooms(UUID.fromString(principal.getName()))));
   }
@@ -77,12 +79,13 @@ public class ChatMessagingController {
   }
 
   @MessageMapping("/{chatroomId}/invite")
-  void inviteUserToChat(@Payload UserIdDTO userToInvite,
+  void inviteUserToChat(@Payload UserNameDTO userToInvite,
                         @DestinationVariable String chatroomId,
                         Principal principal) {
-    Chatroom chatroom = chatService.addUserToChatroom(UUID.fromString(principal.getName()), userToInvite.userId(), UUID.fromString(chatroomId));
-    senderService.addUserToChatroom(UUID.fromString(chatroomId), List.of(Converters.toDTO(chatService.getUserInfo(userToInvite.userId()))));
-    senderService.addChatroomToUser(userToInvite.userId(), Converters.toDTO(List.of(chatroom)));
+    User user = chatService.findUserByUsername(userToInvite.username()).orElseThrow(() -> new UserNameNotFoundException(userToInvite.username()));
+    Chatroom chatroom = chatService.addUserToChatroom(UUID.fromString(principal.getName()), user.id(), UUID.fromString(chatroomId));
+    senderService.addUserToChatroom(UUID.fromString(chatroomId), List.of(Converters.toDTO(chatService.getUserInfo(user.id()))));
+    senderService.addChatroomToUser(user.id(), Converters.toDTO(List.of(chatroom)));
   }
 
   @MessageMapping("/{chatroomId}/kick")

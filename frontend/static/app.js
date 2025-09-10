@@ -8,6 +8,7 @@ const cachedMessages = new Map();
 var jwttoken;
 const stompClient = new StompJs.Client({
   heartbeatOutgoing: 10000,
+  heartbeatIncoming: 10000,
   brokerURL: websocketUrl
 });
 var userId;
@@ -235,10 +236,10 @@ async function login() {
 }
 
 function inviteUser() {
-  const userIdToInvite = $("#invite-user-id").val();
+  const userIdToInvite = $("#invite-user-name").val();
   stompClient.publish({
     destination: "/chat/" + currentChatroom + "/invite",
-    body: JSON.stringify({'userId': userIdToInvite})
+    body: JSON.stringify({'username': userIdToInvite})
   });
 }
 
